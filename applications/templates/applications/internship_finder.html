@@ -5,171 +5,112 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Internship Finder</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1050px;
-            margin: 35px auto;
-            padding: 0 20px;
-            background: #f5f7fb;
-            color: #172033;
-        }
-        nav { margin-bottom: 25px; }
-        nav a { margin-right: 20px; }
-        fieldset, article {
-            background: white;
-            border: 1px solid #d8deea;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 18px;
-        }
+        body { font-family: Arial, sans-serif; max-width: 1050px; margin: 35px auto; padding: 0 20px; background: #f5f7fb; color: #172033; }
+        nav { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 25px; }
+        fieldset, article { background: white; border: 1px solid #d8deea; border-radius: 10px; padding: 20px; margin-bottom: 18px; }
         legend { font-weight: bold; }
-        .options {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 14px 22px;
-        }
-        button {
-            background: #2459d3;
-            color: white;
-            padding: 10px 18px;
-            border: 0;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        button:disabled {
-            background: #758094;
-            cursor: default;
-        }
-        .notice {
-            background: #e8eefc;
-            padding: 12px;
-            border-radius: 6px;
-        }
-        .badge {
-            display: inline-block;
-            background: #e9edf4;
-            padding: 5px 9px;
-            border-radius: 5px;
-        }
+        .options { display: flex; flex-wrap: wrap; gap: 14px 22px; }
+        input[type="search"] { box-sizing: border-box; width: 100%; max-width: 500px; padding: 10px; border: 1px solid #bac5d8; border-radius: 6px; font: inherit; }
+        button { background: #2459d3; color: white; padding: 10px 18px; border: 0; border-radius: 6px; cursor: pointer; }
+        button:disabled { background: #758094; cursor: default; }
+        .notice { background: #e8eefc; padding: 12px; border-radius: 6px; }
+        .badge { display: inline-block; background: #e9edf4; padding: 5px 9px; border-radius: 5px; }
         h2 { font-size: 20px; }
-        .actions {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 20px;
-            margin-top: 15px;
-        }
+        .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; margin-top: 15px; }
     </style>
 </head>
 <body>
     <nav>
         <a href="{% url 'application_list' %}">My applications</a>
-        <a href="{% url 'admin:index' %}">Django admin</a>
+        <a href="{% url 'internship_finder' %}">Find internships</a>
+        <a href="{% url 'application_create' %}">Add application</a>
+        <a href="{% url 'import_email' %}">Import email</a>
+        <a href="{% url 'admin:index' %}">Admin</a>
     </nav>
-
     <h1>Find software internships</h1>
-    <p>
-        Search Summer 2027 software internships across companies.
-        Listings provided by
-        <a href="https://github.com/SimplifyJobs/Summer2027-Internships"
-           target="_blank" rel="noopener noreferrer">
-            Pitt CSC &amp; Simplify
-        </a>.
+    <p>Search Summer 2027 software internships across companies. Listings provided by
+        <a href="https://github.com/SimplifyJobs/Summer2027-Internships" target="_blank" rel="noopener noreferrer">Pitt CSC &amp; Simplify</a>.
     </p>
-
     {% for message in messages %}
         <p class="notice">{{ message }}</p>
     {% endfor %}
-
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="action" value="search">
-
+        <fieldset>
+            <legend>Company</legend>
+            <label for="company">Search by company name</label>
+            <p><input id="company" type="search" name="company" maxlength="200" value="{{ company_query }}" placeholder="For example: Google or RTX"></p>
+            <p>Leave blank to search all companies. Company searches also show your tracked applications.</p>
+        </fieldset>
         <fieldset>
             <legend>Locations</legend>
             <p>Leave all unchecked to search all recognized US locations.</p>
             <div class="options">
                 {% for city in cities %}
-                    <label>
-                        <input type="checkbox" name="cities"
-                               value="{{ city }}"
-                               {% if city in selected_cities %}checked{% endif %}>
-                        {{ city }}
-                    </label>
+                    <label><input type="checkbox" name="cities" value="{{ city }}" {% if city in selected_cities %}checked{% endif %}> {{ city }}</label>
                 {% endfor %}
             </div>
-            <p>
-                Remote listings without a stated US location are excluded.
-            </p>
+            <p>Remote listings without a stated US location are excluded.</p>
         </fieldset>
-
         <p>
-            <label>
-                <input type="checkbox" name="hide_applied"
-                       {% if hide_applied %}checked{% endif %}>
-                Skip companies I have already applied to
-            </label>
+            <label><input type="checkbox" name="hide_graduate" {% if hide_graduate %}checked{% endif %}> Hide roles requiring a master's or PhD</label>
         </p>
-
+        <p>Roles accepting bachelor's students and listings without degree information stay visible. Check the posting for full requirements.</p>
+        <p><label><input type="checkbox" name="hide_applied" {% if hide_applied %}checked{% endif %}> Skip companies I have already applied to</label></p>
+        <p>Uncheck this option to find additional roles at companies you have applied to.</p>
         <button type="submit">Search internships</button>
     </form>
-
     {% if searched %}
+        {% if company_query %}
+            <section aria-labelledby="history-title">
+                <h2 id="history-title">Your tracked applications matching “{{ company_query }}”</h2>
+                <p>This history includes every status and location, even when a posting is no longer in the source.</p>
+                {% for application in tracked_applications %}
+                    <article>
+                        <h2>{{ application.role }}</h2>
+                        <p>{{ application.company }} · <span class="badge">{{ application.status }}</span></p>
+                        <p>Date applied: {{ application.date_applied|date:"Y-m-d"|default:"Not recorded" }}</p>
+                        {% if application.link %}
+                            <a href="{{ application.link }}" target="_blank" rel="noopener noreferrer">View posting</a>
+                        {% endif %}
+                    </article>
+                {% empty %}
+                    <p>No tracked applications match this company name.</p>
+                {% endfor %}
+            </section>
+        {% endif %}
         <h2>{{ total }} matching opportunities</h2>
-        <p>
-            Showing up to 25 per page.
-            Results may include advanced-degree roles.
-        </p>
-
+        <p>Showing up to 25 per page. {% if hide_graduate %}Graduate-only roles are hidden using the source’s degree information.{% else %}Results may include advanced-degree roles.{% endif %}</p>
         {% for job in jobs %}
             <article>
                 <h2>{{ job.role }}</h2>
                 <p>{{ job.company }} · {{ job.location }}</p>
-
                 {% if job.tracked %}
                     <span class="badge">Already tracked</span>
                 {% elif job.company_applied %}
-                    <span class="badge">
-                        Applied to another role at this company
-                    </span>
+                    <span class="badge">Applied to another role at this company</span>
                 {% endif %}
-
                 <div class="actions">
-                    <a href="{{ job.link }}" target="_blank"
-                       rel="noopener noreferrer">View application</a>
-
+                    <a href="{{ job.link }}" target="_blank" rel="noopener noreferrer">View application</a>
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="save">
                         <input type="hidden" name="job_id" value="{{ job.id }}">
-                        <button type="submit"
-                                {% if job.tracked %}disabled{% endif %}>
-                            {% if job.tracked %}
-                                Already tracked
-                            {% else %}
-                                Save
-                            {% endif %}
+                        <button type="submit" {% if job.tracked %}disabled{% endif %}>
+                            {% if job.tracked %}Already tracked{% else %}Save{% endif %}
                         </button>
                     </form>
                 </div>
             </article>
         {% empty %}
-            <p>No matches. Try other cities or leave all cities unchecked.</p>
+            <p>No source listings match these filters. Try another company name, leave cities unchecked, or turn off “Skip companies I have already applied to.”</p>
         {% endfor %}
-
         {% if page_obj.has_other_pages %}
             <nav aria-label="Search result pages">
-                {% if page_obj.has_previous %}
-                    <a href="?page={{ page_obj.previous_page_number }}">
-                        Previous
-                    </a>
-                {% endif %}
-
-                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-
-                {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}">Next</a>
-                {% endif %}
+                {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+                <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Next</a>{% endif %}
             </nav>
         {% endif %}
     {% endif %}
