@@ -1,0 +1,26 @@
+# Python environment and cache
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Personal database and mailbox files
+db.sqlite3
+db.sqlite3-*
+*.mbox
+email_records.json
+applications.json
+
+# Generated search data
+opportunities.json
+seen_opportunities.json
+
+# Editor files
+.vscode/
+*.code-workspace
+# Local project archives
+*.zip

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add application</title>
+</head>
+<body>
+        <nav style="display:flex; flex-wrap:wrap; gap:20px; margin-bottom:25px;">
+        <a href="{% url 'application_list' %}">My applications</a>
+        <a href="{% url 'internship_finder' %}">Find internships</a>
+        <a href="{% url 'application_create' %}">Add application</a>
+        <a href="{% url 'admin:index' %}">Admin</a>
+    </nav>
+    <h1>Add application</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save application</button>
+    </form>
+
+    <a href="{% url 'application_list' %}">Back to applications</a>
+</body>
+</html>
