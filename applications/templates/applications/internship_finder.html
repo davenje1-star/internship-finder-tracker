@@ -54,6 +54,13 @@
             <p>Remote listings without a stated US location are excluded.</p>
         </fieldset>
         <p>
+            <label>
+                <input type="checkbox" name="software_only" {% if software_only %}checked{% endif %}>
+                Software engineering titles only
+            </label>
+        </p>
+        <p>Show titles containing Software Engineer, Software Engineering, Software Developer, or Software Development. Leave unchecked to include broader technology roles.</p>
+        <p>
             <label><input type="checkbox" name="hide_graduate" {% if hide_graduate %}checked{% endif %}> Hide roles requiring a master's or PhD</label>
         </p>
         <p>Roles accepting bachelor's students and listings without degree information stay visible. Check the posting for full requirements.</p>
@@ -104,7 +111,7 @@
                 </div>
             </article>
         {% empty %}
-            <p>No source listings match these filters. Try another company name, leave cities unchecked, or turn off “Skip companies I have already applied to.”</p>
+            <p>No source listings match these filters. Try another company name, leave cities unchecked, uncheck the title filter, or turn off “Skip companies I have already applied to.”</p>
         {% endfor %}
         {% if page_obj.has_other_pages %}
             <nav aria-label="Search result pages">

@@ -1,9 +1,13 @@
 from collections import Counter, defaultdict
 
+from django.db.models import F
+from django.db.models.functions import Lower
+
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.urls import reverse
 
 from .models import Application
 
@@ -84,12 +88,17 @@ def build_flow(applications):
 
 @staff_member_required
 def progress_dashboard(request):
+    sort = request.POST.get('sort', '') if request.method == 'POST' else request.GET.get('sort', '')
+    allowed_sorts = {'company_asc', 'company_desc', 'date_asc', 'date_desc'}
+    if sort not in allowed_sorts:
+        sort = 'company_asc'
+    redirect_url = f"{reverse('progress_dashboard')}?sort={sort}"
     if request.method == 'POST':
         try:
             application_id = int(request.POST.get('application_id', ''))
         except (TypeError, ValueError):
             messages.error(request, 'Choose a valid application.')
-            return redirect('progress_dashboard')
+            return redirect(redirect_url)
         application = get_object_or_404(Application, pk=application_id, owner=request.user)
         status = request.POST.get('status', '')
         if status not in dict(Application.STATUS_CHOICES):
@@ -102,13 +111,25 @@ def progress_dashboard(request):
                 fields.append('date_applied')
             application.save(update_fields=fields)
             messages.success(request, 'Status saved. Your progress chart is updated.')
-        return redirect('progress_dashboard')
+        return redirect(redirect_url)
 
+    ordering = {
+        'company_asc': [Lower('company').asc(), Lower('role').asc(), 'id'],
+        'company_desc': [Lower('company').desc(), Lower('role').asc(), 'id'],
+        'date_asc': [F('date_applied').asc(nulls_last=True), Lower('company').asc(), 'id'],
+        'date_desc': [F('date_applied').desc(nulls_last=True), Lower('company').asc(), 'id'],
+    }
     applications = list(Application.objects.filter(owner=request.user)
-                        .order_by('company', 'role').prefetch_related('status_history'))
+                        .order_by(*ordering[sort]).prefetch_related('status_history'))
     counts = Counter(application.status for application in applications)
     return render(request, 'applications/progress_dashboard.html', {
         'applications': applications, 'total': len(applications),
+        'sort': sort,
+        'company_next_sort': 'company_desc' if sort == 'company_asc' else 'company_asc',
+        'date_next_sort': 'date_desc' if sort == 'date_asc' else 'date_asc',
+        'company_aria_sort': 'ascending' if sort == 'company_asc' else 'descending' if sort == 'company_desc' else 'none',
+        'date_aria_sort': 'ascending' if sort == 'date_asc' else 'descending' if sort == 'date_desc' else 'none',
+
         'cards': [{'label': label, 'count': counts[status]} for status, label in Application.STATUS_CHOICES],
         'flow': build_flow(applications), 'status_choices': Application.STATUS_CHOICES,
     })
