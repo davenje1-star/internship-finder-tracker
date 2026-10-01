@@ -64,16 +64,29 @@ def build_flow(applications):
             path.append(key)
             node_colors[key] = COLORS[status]
 
-        if application.status == 'Offer':
-            ending = (6, 'Current: Offer')
-        elif application.status == 'Rejected':
-            ending = (path[-1][0] + 1, 'Current: Rejected')
+        if application.status in {'Rejected', 'Offer'}:
+            column = (
+                6 if application.status == 'Offer'
+                else path[-1][0] + 1
+            )
+            ending = (
+                column,
+                f'Current: {application.get_status_display()}',
+            )
+            path.append(ending)
+            node_colors[ending] = COLORS[application.status]
         else:
-            label = ('Awaiting recorded update' if application.status == 'Applied'
-                     else f'Current: {application.get_status_display()}')
-            ending = (path[-1][0] + 1, label)
-        path.append(ending)
-        node_colors[ending] = COLORS.get(application.status, '#475569')
+            # Mark the last stage as current instead of duplicating it.
+            last_stage = path[-1]
+            current_stage = (
+                last_stage[0],
+                f'Current: {application.get_status_display()}',
+            )
+            path[-1] = current_stage
+            node_colors[current_stage] = COLORS.get(
+                application.status, '#475569'
+            )
+
         nodes.update(path)
         edges.update(zip(path, path[1:]))
     if not nodes:
