@@ -127,15 +127,16 @@
         <p class="muted">
             Follow each branch from left to right. Wider lines represent
             more applications. Hover over a line for its count.
-            Scroll sideways for longer histories.
+            Stages stay aligned even when applications have different histories.
         </p>
         <p class="muted">
-            Existing applications start at their status when tracking began.
-            Earlier stages are unknown. “Awaiting recorded update” means
-            the current status is Applied. Corrections and repeated interview
-            rounds appear in the order you recorded them.
+            Saved opportunities stay in the table but are excluded from this chart.
+            Only recorded stages are shown; earlier stages are not assumed.
+            “Awaiting recorded update” means the current status is Applied.
+            The chart summarizes the current application path. Full details,
+            including corrections and repeated rounds, remain in View history.
         </p>
-        {% if total %}
+        {% if flow.nodes %}
             <div class="chart">
                 <svg
                     width="{{ flow.width }}"
@@ -187,7 +188,7 @@
                 </svg>
             </div>
         {% else %}
-            <p>Add or save an application to start tracking progress.</p>
+            <p>No applications beyond Saved yet. Update an application’s status to begin.</p>
         {% endif %}
     </section>
     <section>
@@ -203,25 +204,10 @@
                 <thead>
                     <tr>
                         <th aria-sort="{{ company_aria_sort }}">
-                           <a href="?sort={{ company_next_sort }}#application-table">
-                                Company and role
-                                {% if sort == 'company_asc' %}
-                                    (A–Z)
-                                {% elif sort == 'company_desc' %}
-                                    (Z–A)
-                                {% endif %}
-                            </a>
+                            <a href="?sort={{ company_next_sort }}#application-table">Company and role{% if sort == 'company_asc' %} (A–Z){% elif sort == 'company_desc' %} (Z–A){% endif %}</a>
                         </th>
-                        
                         <th aria-sort="{{ date_aria_sort }}">
-                            <a href="?sort={{ date_next_sort }}#application-table">
-                                Date applied
-                                {% if sort == 'date_asc' %}
-                                    (Earliest first)
-                                {% elif sort == 'date_desc' %}
-                                    (Latest first)
-                                {% endif %}
-                            </a>
+                            <a href="?sort={{ date_next_sort }}#application-table">Date applied{% if sort == 'date_asc' %} (earliest first){% elif sort == 'date_desc' %} (latest first){% endif %}</a>
                         </th>
                         <th>Current status</th>
                         <th>History</th>

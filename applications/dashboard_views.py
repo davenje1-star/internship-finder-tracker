@@ -21,22 +21,59 @@ COLORS = {
 
 
 def build_flow(applications):
-    """Use event position as the column, so corrections never create cycles."""
+    """Align recruiting stages; keep exact event history in the table."""
+    stages = {
+        'Applied': 1, 'Assessment': 2, 'Interview': 3,
+        'First Interview': 3, 'Second Interview': 4, 'Final Interview': 5,
+    }
     nodes = Counter()
     edges = Counter()
-    root = (0, 'All tracked applications')
+    node_colors = {}
+    root = (0, 'Applications')
     for application in applications:
+        if application.status == 'Saved':
+            continue
         statuses = [entry.status for entry in application.status_history.all()]
         if not statuses or statuses[-1] != application.status:
             statuses.append(application.status)
-        path = [root]
+
+        # A return to Saved or Applied starts a fresh attempt in the chart.
+        # The full history still retains every correction and repeated round.
+        attempt = []
+        previous = None
         for status in statuses:
-            if len(path) > 1 and path[-1][1] == status:
-                continue
-            path.append((len(path), status))
-        ending = ('Awaiting recorded update' if application.status == 'Applied'
-                  else f'Current: {application.get_status_display()}')
-        path.append((len(path), ending))
+            if status == 'Saved':
+                attempt = []
+            elif (status == 'Applied' and previous != 'Applied') or (
+                previous in {'Rejected', 'Offer'} and status in stages
+            ):
+                attempt = [status]
+            else:
+                attempt.append(status)
+            previous = status
+
+        observed = {}
+        limit = stages.get(application.status, 5)
+        for status in attempt:
+            column = stages.get(status)
+            if column is not None and column <= limit:
+                observed[column] = status
+        path = [root]
+        for column, status in sorted(observed.items()):
+            key = (column, status)
+            path.append(key)
+            node_colors[key] = COLORS[status]
+
+        if application.status == 'Offer':
+            ending = (6, 'Current: Offer')
+        elif application.status == 'Rejected':
+            ending = (path[-1][0] + 1, 'Current: Rejected')
+        else:
+            label = ('Awaiting recorded update' if application.status == 'Applied'
+                     else f'Current: {application.get_status_display()}')
+            ending = (path[-1][0] + 1, label)
+        path.append(ending)
+        node_colors[ending] = COLORS.get(application.status, '#475569')
         nodes.update(path)
         edges.update(zip(path, path[1:]))
     if not nodes:
@@ -45,15 +82,15 @@ def build_flow(applications):
     layers = defaultdict(list)
     for key in nodes:
         layers[key[0]].append(key)
-    total = len(applications)
+    total = nodes[root]
     scale = min(8, 400 / max(total, 1))
     gap = 34
     height = max(sum(nodes[key] * scale for key in keys) + gap * (len(keys) - 1)
                  for keys in layers.values()) + 100
-    width = max(900, len(layers) * 260)
+    width = max(900, (max(layers) + 1) * 260)
     positions = {}
     output_nodes = []
-    for column, keys in layers.items():
+    for column, keys in sorted(layers.items()):
         keys.sort(key=lambda key: key[1])
         occupied = sum(nodes[key] * scale for key in keys) + gap * (len(keys) - 1)
         y = (height - occupied) / 2
@@ -61,7 +98,7 @@ def build_flow(applications):
             x = 25 + column * 260
             h = nodes[key] * scale
             color_status = key[1].removeprefix('Current: ')
-            color = COLORS.get(color_status, '#475569')
+            color = node_colors.get(key, '#475569')
             positions[key] = (x, y, h)
             output_nodes.append({'x': x, 'y': y, 'height': h, 'label': key[1],
                                  'count': nodes[key], 'color': color,
@@ -82,7 +119,7 @@ def build_flow(applications):
         output_links.append({'path': f'M {x1 + 16} {y1} C {middle} {y1}, {middle} {y2}, {x2} {y2}',
                              'width': thickness, 'count': count,
                              'label': f'{source[1]} → {target[1]}',
-                             'color': COLORS.get(target[1], '#64748b')})
+                             'color': node_colors.get(target, '#64748b')})
     return {'nodes': output_nodes, 'links': output_links, 'width': width, 'height': height}
 
 
