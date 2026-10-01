@@ -1,14 +1,18 @@
 import uuid
 
 from django.conf import settings
-from django.db import models
+from django.db import models, router, transaction
 
 
 class Application(models.Model):
     STATUS_CHOICES = [
         ("Saved", "Saved"),
         ("Applied", "Applied"),
-        ("Interview", "Interview"),
+        ("Assessment", "Assessment"),
+        ("Interview", "Interview (unspecified stage)"),
+        ("First Interview", "First Interview"),
+        ("Second Interview", "Second Interview"),
+        ("Final Interview", "Final Interview"),
         ("Rejected", "Rejected"),
         ("Offer", "Offer"),
     ]
@@ -32,8 +36,43 @@ class Application(models.Model):
     location = models.TextField(blank=True)
     email_metadata = models.JSONField(default=dict, blank=True)
 
+    def save(self, *args, **kwargs):
+        database = kwargs.get("using") or router.db_for_write(type(self), instance=self)
+        update_fields = kwargs.get("update_fields")
+        records_status = update_fields is None or "status" in update_fields
+        with transaction.atomic(using=database):
+            previous = None
+            if self.pk and not self._state.adding and records_status:
+                previous = type(self).objects.using(database).select_for_update().get(pk=self.pk).status
+            is_new = self._state.adding
+            super().save(*args, **kwargs)
+            if is_new or (records_status and previous != self.status):
+                ApplicationStatusHistory.objects.using(database).create(
+                    application=self,
+                    previous_status=previous or "",
+                    status=self.status,
+                )
+
     def __str__(self):
         return f"{self.company} — {self.role}"
+
+
+class ApplicationStatusHistory(models.Model):
+    application = models.ForeignKey(
+        Application, on_delete=models.CASCADE, related_name="status_history"
+    )
+    previous_status = models.CharField(max_length=20, blank=True)
+    status = models.CharField(max_length=20, choices=Application.STATUS_CHOICES)
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    is_baseline = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["recorded_at", "id"]
+        verbose_name_plural = "application status history"
+
+    def __str__(self):
+        return f"{self.previous_status or 'Starting status'} → {self.status}"
+
 
 
 class EmailMailbox(models.Model):
