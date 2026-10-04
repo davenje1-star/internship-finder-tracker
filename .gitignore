@@ -24,3 +24,4 @@ seen_opportunities.json
 *.code-workspace
 # Local project archives
 *.zip
+staticfiles/
