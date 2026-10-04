@@ -25,3 +25,4 @@ seen_opportunities.json
 # Local project archives
 *.zip
 staticfiles/
+private_backups/
