@@ -4,11 +4,21 @@ A Django web application for finding US software internships, organizing recruit
 
 I built this project to solve a problem in my own internship search: keeping opportunities, application statuses, and recruiting follow-ups organized in one place. It began as Python scripts using JSON files. I moved to Django and SQLite to learn database models, forms, authentication, migrations, and web development while building a tool I could use. The hosted version now uses PostgreSQL through Neon.
 
-## Live Website
+## Public Demo
 
-[Open Internship Finder & Application Tracker](https://internship-finder-tracker.onrender.com/)
+[Explore the read-only demo](https://internship-finder-tracker.onrender.com/demo/)
 
-The hosted website runs without starting a local server or opening VS Code. It currently requires an authorized Django staff account and is intended for personal use. Public registration and a recruiter demo are not implemented. Visitors can review the source code in this repository; the live link alone does not grant access to the tracker.
+No login or local setup is required. The dashboard shows fictional companies, sample applications, status counts, a branching progress chart, and expandable histories. Visitors can sort company names and application dates.
+
+[Try the public internship finder](https://internship-finder-tracker.onrender.com/demo/finder/) to search real Summer 2027 source listings by company, location, software title, and degree requirements.
+
+Public demo pages do not include editing, saving, deleting, or email imports. Their views accept only GET and HEAD requests. Dashboard samples are generated in memory; finder results come from the public listing source. Neither demo view queries personal application records.
+
+The public finder opens employer postings but does not track applications or show personal history. Saving, account-based duplicate checks, status changes, and email imports belong to the private tracker.
+
+[Private tracker — owner login required](https://internship-finder-tracker.onrender.com/)
+
+The owner uses a separate authenticated workflow to manage real applications. Public registration is not available. Administrator credentials are not shared with demo visitors.
 
 The application is hosted on Render with a Neon PostgreSQL database. Render's free web service sleeps after inactivity, so the first visit may take about a minute to load.
 
@@ -26,6 +36,15 @@ The application is hosted on Render with a Neon PostgreSQL database. Render's fr
 - Git, GitHub, and Render for version control and deployment
 
 ## Features
+
+### Public Read-Only Demo
+
+- Accessible without login at `/demo/` and `/demo/finder/`.
+- Public finder with company, location, title, and degree filters; search options persist across result pages.
+- Fictional sample applications and histories.
+- Reuses the tracker’s progress-chart function.
+- Supports sorting and expandable history.
+- Rejects write methods and performs no application database queries.
 
 ### Internship Search
 
@@ -67,7 +86,17 @@ The application is hosted on Render with a Neon PostgreSQL database. Render's fr
 - Exclude Saved opportunities from the chart while retaining them in the table and status counts.
 - Avoid duplicate history entries when saving an unchanged status.
 
-## Using the Hosted Tracker
+## Exploring the Demo
+
+1. Open the [public demo](https://internship-finder-tracker.onrender.com/demo/).
+2. Review the sample status counts and branching application paths.
+3. Click **Company and role** or **Date applied** to change the table's sort order.
+4. Expand **View history** to inspect a fictional application's recorded stages.
+5. Open **Find internships** to search real public listings and visit employer postings.
+
+The fictional dashboard stays the same when refreshed. Public finder results can change as the source updates. It does not provide a personal account or persist visitor changes. The source code is available in this repository.
+
+## Using the Private Hosted Tracker
 
 1. Open the [live website](https://internship-finder-tracker.onrender.com/).
 2. Sign in with an authorized account. The [admin login](https://internship-finder-tracker.onrender.com/admin/) can also be used to sign in.
@@ -81,7 +110,9 @@ Saving an opportunity or opening its posting does not submit an application or a
 
 | Page | Path |
 | --- | --- |
-| My applications | `/` |
+| Public sample dashboard | `/demo/` |
+| Public internship finder | `/demo/finder/` |
+| My applications — login required | `/` |
 | Find internships | `/finder/` |
 | Add application | `/add/` |
 | Import email | `/import-email/` |
@@ -164,7 +195,7 @@ Keep `.env` beside `manage.py`. Do not commit it. Leave `DATABASE_URL` unset to 
 .\.venv\Scripts\python.exe manage.py runserver
 ```
 
-Open [Django admin](http://127.0.0.1:8000/admin/) to sign in, then visit the [tracker](http://127.0.0.1:8000/). Keep the terminal running while using the local website. Press Ctrl+C to stop it.
+Open the [local demo](http://127.0.0.1:8000/demo/) without signing in. For the private tracker, open [Django admin](http://127.0.0.1:8000/admin/) to sign in, then visit the [tracker](http://127.0.0.1:8000/). Keep the terminal running while using the local website. Press Ctrl+C to stop it.
 
 ## Render and Neon Deployment
 
@@ -270,6 +301,10 @@ A Windows-generated fixture produced a `UnicodeDecodeError` during the Neon impo
 
 I added Gunicorn, PostgreSQL connection settings, WhiteNoise, static-file collection, and production HTTPS settings. Separating configuration and secrets from source code allowed the same project to run locally and on Render.
 
+### A public demo needed to preserve privacy
+
+I created a separate read-only view using fictional data rather than sharing administrator credentials or exposing real applications. The demo reuses the chart code, provides sorting and expandable histories, and rejects write requests. Verification checked anonymous rendering, sorting, rejected write methods, and the absence of database queries or editing forms. The public finder also reuses location, title, and degree helpers while keeping account-based lookups out of the public view. Its checks cover filters, pagination, caching, and source-fetch failures.
+
 ## Updating the Project on GitHub
 
 For README edits, save the file first, then run:
@@ -294,7 +329,7 @@ Render can redeploy commits when automatic deployments are enabled. Application 
 
 ## Future Improvements
 
-- A public, read-only recruiter demo using sample data.
+- Add a fictional email-preview walkthrough to the public demo.
 - Broader listing sources and more flexible search options.
 - Additional email extraction patterns and validation.
 
