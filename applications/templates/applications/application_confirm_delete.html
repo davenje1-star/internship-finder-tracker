@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Delete application</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 650px; margin: 50px auto; padding: 0 20px; background: #f4f6fa; color: #243047; }
+        main { background: white; border-radius: 10px; padding: 25px; }
+        form { display: flex; gap: 20px; align-items: center; }
+        button { background: #b91c1c; color: white; border: 0; border-radius: 6px; padding: 12px; cursor: pointer; }
+        a { color: #2459c4; }
+    </style>
+</head>
+<body><main>
+    <h1>Delete this application?</h1>
+    <p><strong>{{ application.company }}</strong> — {{ application.role }}</p>
+    <p>This permanently deletes the application and its associated status history. This cannot be undone.</p>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="q" value="{{ query }}">
+        <input type="hidden" name="status" value="{{ selected_status }}">
+        <button type="submit">Yes, delete application</button>
+        <a href="{{ cancel_url }}">Cancel</a>
+    </form>
+</main></body>
+</html>
