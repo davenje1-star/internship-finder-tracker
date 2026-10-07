@@ -121,5 +121,88 @@
             </nav>
         {% endif %}
     {% endif %}
+<script>
+(() => {
+    let saving = false;
+
+    document.addEventListener("submit", async (event) => {
+        const form = event.target;
+        const action = form.querySelector('input[name="action"]');
+
+        if (!action || action.value !== "save") return;
+
+        event.preventDefault();
+        if (saving) return;
+
+        const button = form.querySelector('button[type="submit"]');
+        const data = new FormData(form);
+        const jobId = data.get("job_id");
+        const originalText = button.textContent;
+
+        let notice = form.querySelector(".save-message");
+        if (!notice) {
+            notice = document.createElement("p");
+            notice.className = "save-message";
+            notice.setAttribute("role", "status");
+            form.appendChild(notice);
+        }
+
+        saving = true;
+        button.disabled = true;
+        button.textContent = "Saving…";
+        notice.textContent = "";
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: "POST",
+                body: data,
+                credentials: "same-origin"
+            });
+
+            if (new URL(response.url).pathname !== location.pathname) {
+                throw new Error("Please sign in again in another tab.");
+            }
+            if (!response.ok) {
+                throw new Error("The server returned an error.");
+            }
+
+            // Retrieve this result page to verify that the job is tracked.
+            const check = await fetch(window.location.href, {
+                credentials: "same-origin",
+                cache: "no-store"
+            });
+
+            if (!check.ok ||
+                new URL(check.url).pathname !== location.pathname) {
+                throw new Error("Could not verify the save.");
+            }
+
+            const html = await check.text();
+            const page = new DOMParser().parseFromString(html, "text/html");
+
+            const savedForm = [...page.querySelectorAll("form")].find(
+                candidate =>
+                    candidate.querySelector('input[name="job_id"]')?.value
+                    === jobId
+            );
+
+            if (!savedForm?.querySelector("button")?.disabled) {
+                throw new Error("Save was not confirmed.");
+            }
+
+            button.textContent = "Saved ✓";
+            notice.textContent = "Opportunity is tracked.";
+        } catch (error) {
+            button.disabled = false;
+            button.textContent = originalText;
+            notice.textContent =
+                error.message +
+                " Check My applications before retrying.";
+        } finally {
+            saving = false;
+        }
+    });
+})();
+</script>
 </body>
 </html>
