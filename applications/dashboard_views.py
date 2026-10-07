@@ -58,6 +58,10 @@ def build_flow(applications):
             column = stages.get(status)
             if column is not None and column <= limit:
                 observed[column] = status
+        if application.status == 'Rejected' and not any(
+            column >= 3 for column in observed
+        ):
+            observed = {}
         path = [root]
         for column, status in sorted(observed.items()):
             key = (column, status)
