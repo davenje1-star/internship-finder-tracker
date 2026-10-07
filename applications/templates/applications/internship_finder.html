@@ -20,8 +20,6 @@
     </style>
 </head>
 <body>
-    <p id="live-feedback" role="status" aria-live="polite" style="position:sticky;top:0;background:#e8eefc;padding:10px;z-index:10;min-height:20px">Ready.</p>
-    <main id="live-content">
     <nav>
         <a href="{% url 'application_list' %}">My applications</a>
         <a href="{% url 'internship_finder' %}">Find internships</a>
@@ -123,110 +121,5 @@
             </nav>
         {% endif %}
     {% endif %}
-    </main>
-<script>
-(() => {
-    const selector = '#live-content';
-    const feedback = document.querySelector('#live-feedback');
-    let busy = false;
-    function announce(text, error = false) {
-        feedback.textContent = text;
-        feedback.style.color = error ? '#b91c1c' : '#172033';
-    }
-    async function readPage(response) {
-        const url = new URL(response.url);
-        if (url.origin !== location.origin || url.pathname !== location.pathname) {
-            throw new Error('Your session may have expired. Open the tracker in another tab to sign in, then try again.');
-        }
-        if (!response.ok) throw new Error('The server could not complete this request. Check your connection and try again.');
-        const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
-        const content = doc.querySelector(selector);
-        if (!content) throw new Error('Unexpected server response. Reload the page before trying again.');
-        return {content, url};
-    }
-    function snapshot() {
-        const root = document.querySelector(selector);
-        return {
-            x: window.scrollX, y: window.scrollY,
-            open: [...root.querySelectorAll('details[open]')].map(d => d.closest('tr')?.querySelector('[name="application_id"]')?.value),
-            drafts: [...root.querySelectorAll('select[name="status"]')].map(s => ({
-                id: s.form.querySelector('[name="application_id"]').value,
-                value: s.value, changed: s.value !== [...s.options].find(o => o.defaultSelected)?.value
-            })),
-            scroll: [...root.querySelectorAll('.chart, .table-wrap')].map(e => [e.scrollLeft, e.scrollTop])
-        };
-    }
-    async function update(url, options = {}, savedId = null, keepPage = false, navigation = false) {
-        if (busy) return;
-        busy = true;
-        const state = snapshot();
-        const oldRoot = document.querySelector(selector);
-        const buttons = [...oldRoot.querySelectorAll('button')].map(b => [b, b.disabled]);
-        buttons.forEach(([b]) => b.disabled = true);
-        oldRoot.setAttribute('aria-busy', 'true');
-        announce('Updating…');
-        try {
-            let result = await readPage(await fetch(url, {credentials: 'same-origin', ...options}));
-            // The existing finder redirects saves to page one. Retrieve the current
-            // page after saving, retaining the Django success/error notices.
-            if (keepPage && new URL(location.href).searchParams.has('page')) {
-                const notices = [...result.content.querySelectorAll('.notice')];
-                result = await readPage(await fetch(location.href, {credentials: 'same-origin'}));
-                notices.reverse().forEach(n => result.content.prepend(n));
-            }
-            const next = result.content;
-            for (const d of next.querySelectorAll('details')) {
-                const id = d.closest('tr')?.querySelector('[name="application_id"]')?.value;
-                d.open = state.open.includes(id);
-            }
-            for (const s of next.querySelectorAll('select[name="status"]')) {
-                const id = s.form.querySelector('[name="application_id"]').value;
-                const draft = state.drafts.find(d => d.id === id && d.changed && id !== savedId);
-                if (draft) s.value = draft.value;
-            }
-            oldRoot.replaceWith(next);
-            next.querySelectorAll('.chart, .table-wrap').forEach((e, i) => {
-                if (state.scroll[i]) [e.scrollLeft, e.scrollTop] = state.scroll[i];
-            });
-            if (navigation) history.pushState({}, '', url);
-            else if (!keepPage) history.replaceState({}, '', result.url.pathname + result.url.search + location.hash);
-            window.scrollTo(state.x, state.y);
-            announce([...next.querySelectorAll('.notice')].map(n => n.textContent.trim()).join(' ') || 'Updated.');
-        } catch (error) {
-            announce(error.message + (options.method === 'POST' ? ' If the connection failed during saving, check the record before retrying; it may already have saved.' : ''), true);
-        } finally {
-            buttons.forEach(([b, disabled]) => b.disabled = disabled);
-            document.querySelector(selector).removeAttribute('aria-busy');
-            busy = false;
-        }
-    }
-    document.addEventListener('submit', event => {
-        const form = event.target;
-        if (!form.closest(selector)) return;
-        event.preventDefault();
-        if (busy) return;
-        const data = new FormData(form);
-        if (event.submitter?.name) data.append(event.submitter.name, event.submitter.value);
-        const method = (form.method || 'get').toUpperCase();
-        const url = new URL(form.getAttribute('action') || location.href, location.href);
-        if (method === 'GET') {
-            url.search = new URLSearchParams(data).toString();
-            update(url.href, {}, null, false, true);
-        } else {
-            update(url.href, {method, body: data}, data.get('application_id'), data.get('action') === 'save');
-        }
-    });
-    document.addEventListener('click', event => {
-        const link = event.target.closest('a[href]');
-        if (!link?.closest(selector) || link.target || link.hasAttribute('download') || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-        const url = new URL(link.href);
-        if (url.origin !== location.origin || url.pathname !== location.pathname || (!url.searchParams.has('sort') && !url.searchParams.has('page'))) return;
-        event.preventDefault();
-        update(url.href, {}, null, false, true);
-    });
-    window.addEventListener('popstate', () => update(location.href));
-})();
-
-</script>
 </body>
 </html>
