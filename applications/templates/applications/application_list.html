@@ -15,16 +15,22 @@
         .status { display: inline-block; padding: 6px 10px; border-radius: 20px; font-size: 13px; font-weight: bold; }
         .status-saved { background: #edf0f5; color: #475569; }
         .status-applied { background: #dbeafe; color: #1d4ed8; }
-        .status-interview { background: #fef3c7; color: #92400e; }
+        .status-interview, .status-first, .status-second, .status-final { background: #fef3c7; color: #92400e; }
         .status-rejected { background: #fee2e2; color: #991b1b; }
         .status-offer { background: #dcfce7; color: #166534; }
         form { max-width: 1200px; margin: 24px auto; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
         input, select, button { padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; }
         input[type="search"] { flex: 1; min-width: 200px; }
         button { background: #2459c4; color: white; border-color: #2459c4; cursor: pointer; }
-        button:hover { background: #1d469c; }
+        button:not(.status-toggle):hover { background: #1d469c; }
         .delete-link { color: #b91c1c; }
         .notice { background: #e8eefc; padding: 12px; }
+        .status-editor { margin: 0; display: block; }
+        .status-toggle { border: 0; cursor: pointer; }
+        .status-toggle:hover { filter: brightness(0.95); }
+        .status-editor [hidden] { display: none !important; }
+        .status-message { display: block; font-size: 12px; margin-top: 5px; }
+        .status-assessment { background: #cffafe; color: #155e75; }
     </style>
 </head>
 <body>
@@ -58,8 +64,19 @@
                 <tr>
                     <td>{{ application.company }}</td>
                     <td>{{ application.role }}</td>
-                    <td><span class="status status-{{ application.status|lower }}">{{ application.status }}</span></td>
-                    <td>{{ application.date_applied|date:"Y-m-d"|default:"—" }}</td>
+                    <td>
+                        <form class="status-editor" method="post" action="{% url 'application_status_update' application.pk %}">
+                            {% csrf_token %}
+                            <button type="button" class="status status-toggle status-{{ application.status|lower }}" aria-expanded="false" aria-label="Change status for {{ application.company }}: {{ application.get_status_display }}">{{ application.get_status_display }}</button>
+                            <select name="status" hidden aria-label="Status for {{ application.company }} {{ application.role }}">
+                                {% for value, label in status_choices %}
+                                    <option value="{{ value }}" {% if application.status == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <span class="status-message" role="status" aria-live="polite"></span>
+                        </form>
+                    </td>
+                    <td class="application-date">{{ application.date_applied|date:"Y-m-d"|default:"—" }}</td>
                     <td>{% if application.link %}<a href="{{ application.link }}">View posting</a>{% else %}—{% endif %}</td>
                     <td><a class="delete-link" href="{% url 'application_delete' application.pk %}?q={{ query|urlencode }}&amp;status={{ selected_status|urlencode }}">Delete</a></td>
                 </tr>
@@ -68,5 +85,79 @@
             {% endfor %}
         </tbody>
     </table>
+<script>
+(() => {
+    document.querySelectorAll('.status-editor').forEach(form => {
+        const button = form.querySelector('.status-toggle');
+        const select = form.querySelector('select');
+        const message = form.querySelector('.status-message');
+        let savedValue = select.value;
+        let busy = false;
+
+        function close() {
+            select.hidden = true;
+            button.hidden = false;
+            button.setAttribute('aria-expanded', 'false');
+            button.focus();
+        }
+        button.addEventListener('click', () => {
+            if (busy) return;
+            button.hidden = true;
+            button.setAttribute('aria-expanded', 'true');
+            select.hidden = false;
+            select.focus();
+        });
+        select.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !busy) {
+                select.value = savedValue;
+                close();
+            }
+        });
+        select.addEventListener('blur', () => {
+            if (!busy) close();
+        });
+        form.addEventListener('submit', event => event.preventDefault());
+        select.addEventListener('change', async () => {
+            if (busy) return;
+            if (select.value === savedValue) { close(); return; }
+            const data = new FormData(form);
+            busy = true;
+            select.disabled = true;
+            message.textContent = 'Saving…';
+            try {
+                const response = await fetch(form.getAttribute('action'), {
+                    method: 'POST', body: data, credentials: 'same-origin'
+                });
+                if (response.redirected) throw new Error('Please sign in again in another tab.');
+                if (!response.headers.get('content-type')?.includes('application/json')) {
+                    throw new Error('Unexpected server response.');
+                }
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Could not save the status.');
+                savedValue = result.status;
+                select.value = savedValue;
+                button.textContent = result.label;
+                const colors = {
+                    Saved: 'saved', Applied: 'applied', Assessment: 'assessment',
+                    Interview: 'interview', 'First Interview': 'interview',
+                    'Second Interview': 'interview', 'Final Interview': 'interview',
+                    Rejected: 'rejected', Offer: 'offer'
+                };
+                button.className = 'status status-toggle status-' + colors[savedValue];
+                form.closest('tr').querySelector('.application-date').textContent = result.date_applied;
+                message.textContent = 'Saved ✓';
+            } catch (error) {
+                select.value = savedValue;
+                message.textContent = error.message + ' Reload to verify the status before retrying.';
+            } finally {
+                busy = false;
+                select.disabled = false;
+                close();
+            }
+        });
+    });
+})();
+
+</script>
 </body>
 </html>
