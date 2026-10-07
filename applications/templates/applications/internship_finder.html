@@ -208,7 +208,7 @@
         const data = new FormData(form);
         if (event.submitter?.name) data.append(event.submitter.name, event.submitter.value);
         const method = (form.method || 'get').toUpperCase();
-        const url = new URL(form.action || location.href);
+        const url = new URL(form.getAttribute('action') || location.href, location.href);
         if (method === 'GET') {
             url.search = new URLSearchParams(data).toString();
             update(url.href, {}, null, false, true);
