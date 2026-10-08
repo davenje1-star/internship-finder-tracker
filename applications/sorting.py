@@ -6,7 +6,7 @@ from .models import Application
 
 def application_ordering():
     statuses = [value for value, _ in Application.STATUS_CHOICES if value != 'Rejected']
-    statuses.append('Rejected')
+    statuses.insert(0, 'Rejected')
     stage = Case(*[When(status=value, then=Value(index))
                    for index, value in enumerate(statuses)],
                  default=Value(len(statuses)), output_field=IntegerField())
