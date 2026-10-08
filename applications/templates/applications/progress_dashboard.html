@@ -209,7 +209,7 @@
                         <th aria-sort="{{ date_aria_sort }}">
                             <a href="?sort={{ date_next_sort }}#application-table">Date applied{% if sort == 'date_asc' %} (earliest first){% elif sort == 'date_desc' %} (latest first){% endif %}</a>
                         </th>
-                        <th aria-sort="{{ status_aria_sort }}"><a href="?sort={{ status_next_sort }}#application-table">Current status{% if sort == 'status_asc' %} (stage order){% elif sort == 'status_desc' %} (reverse stage order){% endif %}</a></th>
+                        <th aria-sort="{{ status_aria_sort }}"><a href="?sort={{ status_next_sort }}#application-table">Current status{% if sort == 'status_asc' %} (reverse stage order){% elif sort == 'status_desc' %} (stage order){% endif %}</a></th>
                         <th>History</th>
                     </tr>
                 </thead>
