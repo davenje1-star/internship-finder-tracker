@@ -5,11 +5,11 @@ from .models import Application
 
 
 def application_ordering():
+    statuses = [value for value, _ in Application.STATUS_CHOICES if value != 'Rejected']
+    statuses.append('Rejected')
     stage = Case(*[When(status=value, then=Value(index))
-                   for index, (value, _) in enumerate(Application.STATUS_CHOICES)],
-                 default=Value(len(Application.STATUS_CHOICES)), output_field=IntegerField())
-    rejected_last = Case(When(status='Rejected', then=Value(1)),
-                         default=Value(0), output_field=IntegerField())
+                   for index, value in enumerate(statuses)],
+                 default=Value(len(statuses)), output_field=IntegerField())
     company = [Lower('company').asc(), Lower('role').asc(), 'id']
     return {
         'newest': ['-id'],
@@ -17,8 +17,8 @@ def application_ordering():
         'company_desc': [Lower('company').desc(), Lower('role').asc(), 'id'],
         'date_asc': [F('date_applied').asc(nulls_last=True), *company],
         'date_desc': [F('date_applied').desc(nulls_last=True), *company],
-        'status_asc': [rejected_last.asc(), stage.asc(), *company],
-        'status_desc': [rejected_last.asc(), stage.desc(), *company],
+        'status_asc': [stage.asc(), *company],
+        'status_desc': [stage.desc(), *company],
     }
 
 
