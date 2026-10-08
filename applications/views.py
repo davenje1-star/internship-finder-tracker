@@ -1,3 +1,4 @@
+from .email_detection import detect_company, detect_status, review_notes
 import hashlib
 
 import re
@@ -845,16 +846,11 @@ def read_uploaded_email(uploaded):
 
             html_parts.append(text)
 
-    body = "\n".join(plain_parts).strip()
-
-    if not body:
-
-        body = BeautifulSoup(
-
-            "\n".join(html_parts), "html.parser"
-
-        ).get_text(separator=" ", strip=True)
-
+    plain_body = "\n".join(plain_parts).strip()
+    html_body = BeautifulSoup(
+        "\n".join(html_parts), "html.parser"
+    ).get_text(separator=" ", strip=True)
+    body = "\n".join(part for part in (plain_body, html_body) if part).strip()
     if not body:
 
         raise ValueError("No readable email body was found.")
@@ -971,7 +967,10 @@ def import_email(request):
 
                     return redirect("import_email")
 
-                company = suggest_company(subject, sender)
+                company = detect_company(
+                    subject, sender, body,
+                    Application.objects.filter(owner=request.user).values_list("company", flat=True),
+                )
 
                 role = suggest_role(body)
 
@@ -993,30 +992,7 @@ def import_email(request):
 
                 ]
 
-                if is_rejection(body):
-
-                    status = "Rejected"
-
-                elif re.search(
-
-                    r"thank you for applying|thanks for applying|"
-
-                    r"application received|received your application|"
-
-                    r"application has been received|received your resume",
-
-                    subject + " " + body,
-
-                    flags=re.IGNORECASE,
-
-                ):
-
-                    status = "Applied"
-
-                else:
-
-                    status = ""
-
+                status = detect_status(subject, body)
                 email = {
 
                     "message_id": email_id,
@@ -1024,6 +1000,7 @@ def import_email(request):
                     "subject": subject,
 
                     "email_date": data["email_date"].isoformat(),
+                    "review_notes": review_notes(company, role, status),
 
                 }
 
