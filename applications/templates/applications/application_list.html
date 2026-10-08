@@ -46,6 +46,7 @@
     {% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}
     <p><a href="{% url 'application_create' %}">+ Add application</a></p>
     <form method="get">
+        <input type="hidden" name="sort" value="{{ sort }}">
         <input type="search" name="q" value="{{ query }}" placeholder="Search company or role" aria-label="Search company or role">
         <select name="status" aria-label="Filter by status">
             <option value="">All statuses</option>
@@ -57,8 +58,9 @@
         <a href="{% url 'application_list' %}">Clear</a>
     </form>
     <p>{{ applications|length }} applications</p>
+    <p>Click Company, Status, or Date applied to sort; click again to reverse. Status follows recruiting stage order. Missing dates stay last.</p>
     <table>
-        <thead><tr><th>Company</th><th>Role</th><th>Status</th><th>Date applied</th><th>Link</th><th>Actions</th></tr></thead>
+        <thead><tr><th aria-sort="{{ company_aria_sort }}"><a href="?q={{ query|urlencode }}&amp;status={{ selected_status|urlencode }}&amp;sort={{ company_next_sort }}">Company{% if company_aria_sort == 'ascending' %} ↑{% elif company_aria_sort == 'descending' %} ↓{% endif %}</a></th><th>Role</th><th aria-sort="{{ status_aria_sort }}"><a href="?q={{ query|urlencode }}&amp;status={{ selected_status|urlencode }}&amp;sort={{ status_next_sort }}">Status{% if status_aria_sort == 'ascending' %} ↑{% elif status_aria_sort == 'descending' %} ↓{% endif %}</a></th><th aria-sort="{{ date_aria_sort }}"><a href="?q={{ query|urlencode }}&amp;status={{ selected_status|urlencode }}&amp;sort={{ date_next_sort }}">Date applied{% if date_aria_sort == 'ascending' %} ↑{% elif date_aria_sort == 'descending' %} ↓{% endif %}</a></th><th>Link</th><th>Actions</th></tr></thead>
         <tbody>
             {% for application in applications %}
                 <tr>
@@ -78,7 +80,7 @@
                     </td>
                     <td class="application-date">{{ application.date_applied|date:"Y-m-d"|default:"—" }}</td>
                     <td>{% if application.link %}<a href="{{ application.link }}">View posting</a>{% else %}—{% endif %}</td>
-                    <td><a class="delete-link" href="{% url 'application_delete' application.pk %}?q={{ query|urlencode }}&amp;status={{ selected_status|urlencode }}">Delete</a></td>
+                    <td><a class="delete-link" href="{% url 'application_delete' application.pk %}?q={{ query|urlencode }}&amp;status={{ selected_status|urlencode }}&amp;sort={{ sort|urlencode }}">Delete</a></td>
                 </tr>
             {% empty %}
                 <tr><td colspan="6">No applications yet.</td></tr>

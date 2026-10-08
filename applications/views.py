@@ -1,3 +1,4 @@
+from .sorting import application_ordering, sort_context
 from .email_detection import detect_company, detect_status, review_notes
 import hashlib
 
@@ -65,7 +66,11 @@ def application_list(request):
 
     status = request.GET.get("status", "").strip()
 
-    applications = Application.objects.filter(owner=request.user).order_by("-id")
+    ordering = application_ordering()
+    sort = request.GET.get("sort", "newest")
+    if sort not in ordering:
+        sort = "newest"
+    applications = Application.objects.filter(owner=request.user).order_by(*ordering[sort])
 
     if query:
 
@@ -87,6 +92,7 @@ def application_list(request):
 
         {
 
+            **sort_context(sort),
             "applications": applications,
 
             "query": query,

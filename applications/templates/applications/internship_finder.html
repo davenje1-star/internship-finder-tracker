@@ -47,6 +47,7 @@
         <fieldset>
             <legend>Locations</legend>
             <p>Leave all unchecked to search all recognized US locations.</p>
+            <p><button type="button" data-city-selection="all">Select all cities</button> <button type="button" data-city-selection="none">Deselect all cities</button></p>
             <div class="options">
                 {% for city in cities %}
                     <label><input type="checkbox" name="cities" value="{{ city }}" {% if city in selected_cities %}checked{% endif %}> {{ city }}</label>
@@ -204,6 +205,15 @@
         }
     });
 })();
+</script>
+<script>
+document.querySelectorAll('[data-city-selection]').forEach(button => {
+    button.addEventListener('click', () => {
+        button.closest('fieldset').querySelectorAll('input[name="cities"]').forEach(input => {
+            input.checked = button.dataset.citySelection === 'all';
+        });
+    });
+});
 </script>
 </body>
 </html>

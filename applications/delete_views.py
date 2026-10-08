@@ -14,7 +14,7 @@ from .models import Application
 def application_delete(request, pk):
     application = get_object_or_404(Application, pk=pk, owner=request.user)
     params = request.POST if request.method == "POST" else request.GET
-    filters = {key: params.get(key, "") for key in ("q", "status")}
+    filters = {key: params.get(key, "") for key in ("q", "status", "sort")}
     list_url = reverse("application_list")
     query = urlencode({key: value for key, value in filters.items() if value})
     if query:
@@ -31,4 +31,5 @@ def application_delete(request, pk):
         "query": filters["q"],
         "selected_status": filters["status"],
         "cancel_url": list_url,
+        "sort": filters["sort"],
     })

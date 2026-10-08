@@ -193,7 +193,7 @@
     </section>
     <section>
         <h2 id="application-table">Update an application</h2>
-        <p class="muted">Click Company and role for A–Z or Z–A. Click Date applied for earliest or latest. Click again to reverse the order. Missing dates stay last.</p>
+        <p class="muted">Click Company and role for A–Z or Z–A. Click Date applied for earliest or latest. Click Current status for recruiting stage order. Click again to reverse the order. Missing dates stay last.</p>
         <p class="muted">
             Choose its current stage and click Save. Every status change
             updates the history and chart. Saving the same status does
@@ -209,7 +209,7 @@
                         <th aria-sort="{{ date_aria_sort }}">
                             <a href="?sort={{ date_next_sort }}#application-table">Date applied{% if sort == 'date_asc' %} (earliest first){% elif sort == 'date_desc' %} (latest first){% endif %}</a>
                         </th>
-                        <th>Current status</th>
+                        <th aria-sort="{{ status_aria_sort }}"><a href="?sort={{ status_next_sort }}#application-table">Current status{% if sort == 'status_asc' %} (stage order){% elif sort == 'status_desc' %} (reverse stage order){% endif %}</a></th>
                         <th>History</th>
                     </tr>
                 </thead>

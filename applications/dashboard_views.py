@@ -1,3 +1,4 @@
+from .sorting import application_ordering, sort_context
 from collections import Counter, defaultdict
 
 from django.db.models import F
@@ -143,7 +144,7 @@ def build_flow(applications):
 @staff_member_required
 def progress_dashboard(request):
     sort = request.POST.get('sort', '') if request.method == 'POST' else request.GET.get('sort', '')
-    allowed_sorts = {'company_asc', 'company_desc', 'date_asc', 'date_desc'}
+    allowed_sorts = {'company_asc', 'company_desc', 'date_asc', 'date_desc', 'status_asc', 'status_desc'}
     if sort not in allowed_sorts:
         sort = 'company_asc'
     redirect_url = f"{reverse('progress_dashboard')}?sort={sort}"
@@ -167,18 +168,13 @@ def progress_dashboard(request):
             messages.success(request, 'Status saved. Your progress chart is updated.')
         return redirect(redirect_url)
 
-    ordering = {
-        'company_asc': [Lower('company').asc(), Lower('role').asc(), 'id'],
-        'company_desc': [Lower('company').desc(), Lower('role').asc(), 'id'],
-        'date_asc': [F('date_applied').asc(nulls_last=True), Lower('company').asc(), 'id'],
-        'date_desc': [F('date_applied').desc(nulls_last=True), Lower('company').asc(), 'id'],
-    }
+    ordering = application_ordering()
     applications = list(Application.objects.filter(owner=request.user)
                         .order_by(*ordering[sort]).prefetch_related('status_history'))
     counts = Counter(application.status for application in applications)
     return render(request, 'applications/progress_dashboard.html', {
         'applications': applications, 'total': len(applications),
-        'sort': sort,
+        **sort_context(sort),
         'company_next_sort': 'company_desc' if sort == 'company_asc' else 'company_asc',
         'date_next_sort': 'date_desc' if sort == 'date_asc' else 'date_asc',
         'company_aria_sort': 'ascending' if sort == 'company_asc' else 'descending' if sort == 'company_desc' else 'none',
