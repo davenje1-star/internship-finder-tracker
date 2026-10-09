@@ -146,7 +146,7 @@ def progress_dashboard(request):
     sort = request.POST.get('sort', '') if request.method == 'POST' else request.GET.get('sort', '')
     allowed_sorts = {'company_asc', 'company_desc', 'date_asc', 'date_desc', 'status_asc', 'status_desc'}
     if sort not in allowed_sorts:
-        sort = 'company_asc'
+        sort = 'status_desc'
     redirect_url = f"{reverse('progress_dashboard')}?sort={sort}"
     if request.method == 'POST':
         try:

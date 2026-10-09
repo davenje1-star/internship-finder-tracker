@@ -67,9 +67,9 @@ def application_list(request):
     status = request.GET.get("status", "").strip()
 
     ordering = application_ordering()
-    sort = request.GET.get("sort", "newest")
+    sort = request.GET.get("sort", "status_desc")
     if sort not in ordering:
-        sort = "newest"
+        sort = "status_desc"
     applications = Application.objects.filter(owner=request.user).order_by(*ordering[sort])
 
     if query:
