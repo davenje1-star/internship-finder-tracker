@@ -1,3 +1,5 @@
+from io import BytesIO
+import json
 from unittest.mock import patch
 import requests
 from django.contrib.auth import get_user_model
@@ -62,13 +64,12 @@ class EmployerFinderTests(TestCase):
 
     @patch("applications.job_sources.requests.get")
     def test_cache_and_stale_fallback_are_labeled_on_repeated_calls(self, get):
-        get.return_value.json.return_value = {"jobs": [RAW]}
+        get.return_value.__enter__.return_value.raw = BytesIO(json.dumps({"jobs": [RAW]}).encode())
         initial = fetch_board(BOARD)
         fetch_board(BOARD)
         self.assertEqual(get.call_count, 1)
         # Expire only the fresh entry while preserving the last successful snapshot.
         from hashlib import sha256
-        import json
         key = "employer_board_v2_" + sha256(json.dumps(BOARD, sort_keys=True).encode()).hexdigest()
         cache.delete(key)
         get.side_effect = requests.Timeout()
@@ -80,7 +81,7 @@ class EmployerFinderTests(TestCase):
 
     @patch("applications.job_sources.requests.get")
     def test_invalid_response_does_not_crash(self, get):
-        get.return_value.json.return_value = {"unexpected": []}
+        get.return_value.__enter__.return_value.raw = BytesIO(b'{"unexpected": []}')
         self.assertTrue(fetch_board(BOARD)["failed"])
 
     @patch("applications.job_sources.fetch_curated", return_value={

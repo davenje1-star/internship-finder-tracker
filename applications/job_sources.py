@@ -9,10 +9,12 @@ from pathlib import Path
 import re
 from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
 
+import ijson
 import requests
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.core.cache import cache
+from urllib3.exceptions import HTTPError as StreamHTTPError
 
 from .finder_filters import software_title_matches
 
@@ -192,6 +194,26 @@ def fetch_special_board(provider):
     return jobs
 
 
+def stream_listing_rows(url, *, params=None, timeout, array_key=""):
+    """Read one listing at a time from a public JSON array."""
+    with requests.get(url, params=params, timeout=timeout, stream=True) as response:
+        response.raise_for_status()
+        response.raw.decode_content = True
+        events = ijson.parse(response.raw, use_float=True)
+        if array_key:
+            if next(events, None) != ("", "start_map", None):
+                raise ValueError("Expected a JSON object containing listings.")
+            for event in events:
+                if event == (array_key, "start_array", None):
+                    break
+            else:
+                raise ValueError("Expected a job list.")
+        elif next(events, None) != ("", "start_array", None):
+            raise ValueError("Expected a job list.")
+        prefix = f"{array_key}.item" if array_key else "item"
+        yield from ijson.items(events, prefix)
+
+
 def fetch_board(board, refresh=False):
     """Return fresh data, or a labeled last-success snapshot after a failure."""
     key = "employer_board_v2_" + sha256(
@@ -210,19 +232,17 @@ def fetch_board(board, refresh=False):
             else:
                 url = f"https://api.lever.co/v0/postings/{board['board']}"
                 params = {"mode": "json"}
-            response = requests.get(url, params=params, timeout=(5, 8))
-            response.raise_for_status()
-            payload = response.json()
-            rows = payload.get("jobs") if isinstance(payload, dict) else payload
-        if not isinstance(rows, list):
-            raise ValueError("Expected a job list.")
+            rows = stream_listing_rows(
+                url, params=params, timeout=(5, 8),
+                array_key="jobs" if provider == "greenhouse" else "",
+            )
         fetched = datetime.now(timezone.utc).isoformat(timespec="seconds")
         jobs = [job for row in rows if (job := normalize(row, board, fetched))]
         result = {"jobs": jobs, "company": board["company"], "fetched_at": fetched}
         cache.set(key, result, FRESH_SECONDS)
         cache.set(key + "_last", result, STALE_SECONDS)
         return {**result, "stale": False, "failed": False}
-    except (requests.RequestException, ValueError, TypeError) as error:
+    except (requests.RequestException, StreamHTTPError, ijson.JSONError, ValueError, TypeError) as error:
         # Briefly cache failures to avoid hammering unavailable boards.
         last = cache.get(key + "_last")
         result = last or {"jobs": [], "company": board["company"], "fetched_at": ""}
@@ -277,11 +297,7 @@ def fetch_curated(refresh=False):
     if cached is not None:
         return cached
     try:
-        response = requests.get(CURATED_URL, timeout=(5, 15))
-        response.raise_for_status()
-        rows = response.json()
-        if not isinstance(rows, list):
-            raise ValueError("Expected a curated job list.")
+        rows = stream_listing_rows(CURATED_URL, timeout=(5, 15))
         fetched = datetime.now(timezone.utc).isoformat(timespec="seconds")
         result = {
             "jobs": [job for row in rows if (job := normalize_curated(row, fetched))],
@@ -290,7 +306,7 @@ def fetch_curated(refresh=False):
         cache.set(key, result, FRESH_SECONDS)
         cache.set(key + "_last", result, STALE_SECONDS)
         return result
-    except (requests.RequestException, ValueError) as error:
+    except (requests.RequestException, StreamHTTPError, ijson.JSONError, ValueError) as error:
         last = cache.get(key + "_last")
         result = {**(last or {"jobs": [], "fetched_at": ""}),
                   "stale": bool(last), "failed": True, "error": type(error).__name__}
@@ -331,7 +347,7 @@ def posting_key(link):
 
 def get_feed(refresh=False):
     boards = employer_boards()
-    with ThreadPoolExecutor(max_workers=8) as pool:
+    with ThreadPoolExecutor(max_workers=4) as pool:
         curated = pool.submit(fetch_curated, refresh=refresh)
         results = list(pool.map(lambda board: fetch_board(board, refresh=refresh), boards))
         results.append(curated.result())
