@@ -8,7 +8,7 @@ I built this project to keep opportunities, application statuses, and recruiting
 
 [Open the public demo](https://internship-finder-tracker.onrender.com/demo/)
 
-Explore the sample dashboard, then use **Find internships** in the demo navigation to search real listings. No login is required.
+Explore the sample dashboard, then use **Find internships** in the demo navigation to search real listings.
 
 No login is required. The public demo is read-only: the dashboard uses fictional applications, and the finder displays real source listings. Visitors cannot save opportunities, modify applications, or import emails. Personal application records remain behind authentication.
 
@@ -18,9 +18,9 @@ Hosted on Render with Neon PostgreSQL. The first visit may take about a minute t
 
 ### Internship Finder
 
-Searches Summer 2027 listings from Pitt CSC & Simplify and current employer postings from Greenhouse and Lever.
+Searches Pitt CSC & Simplify listings and direct employer postings from Greenhouse, Lever, Lockheed Martin Careers, and Disney Careers.
 
-- Search listings by company and filter recognized US locations.
+- Search listings by company and filter by US metro area, including nearby cities and suburbs.
 - Narrow results to software engineering and development titles.
 - Optionally hide roles whose stated requirements are exclusively master's or PhD.
 - Browse results in pages of 25 and open employer postings.
@@ -29,14 +29,14 @@ Searches Summer 2027 listings from Pitt CSC & Simplify and current employer post
 ### Application Tracking
 
 - Store companies, roles, locations, posting links, application dates, and statuses.
-- Track Saved, Applied, Assessment, Interview, First Interview, Second Interview, Final Interview, Rejected, and Offer stages.
+- Track Saved, Applied, Assessment, Interview, First Interview, Second Interview, Final Interview, Rejected, Ghosted, and Offer stages.
 - Search and filter application records.
 - Keep a recorded history of status changes.
 
 ### Progress Dashboard
 
 - Show current status counts and branching application paths.
-- Sort applications by company or application date.
+- Sort applications by company, application date, or status.
 - Expand each application's recorded history.
 - Update statuses in the authenticated tracker.
 
@@ -63,9 +63,9 @@ Saving opportunities, updating records, and importing emails are available in th
 
 ## How the Chart Works
 
-Wider lines represent more applications. Recruiting stages stay aligned, and **Current** identifies the latest status. Saved opportunities remain in the table and counts but are excluded from the chart.
+Wider bands represent more applications. Paths start at **Applied** and advance from left to right. **Current** marks applications still at a stage. **Rejected** and **Ghosted** appear below the main flow. Saved opportunities appear in the table and counts.
 
-Only recorded stages are shown. Earlier events are not reconstructed for applications that predate history tracking. Corrections and repeated rounds remain visible in the expanded history, while the chart summarizes the current application path. History timestamps indicate when changes were recorded in the tracker.
+After Applied, the chart uses recorded stages and the current status. Corrections and repeated rounds remain visible in the expanded history, while the chart summarizes the current application path. History timestamps indicate when changes were recorded in the tracker.
 
 ## Local Development Setup
 
@@ -148,18 +148,18 @@ Provider documentation: [Render Django deployment](https://render.com/docs/deplo
 
 ## Data Source and Limitations
 
-The web finders combine the [Pitt CSC & Simplify Summer 2027 feed](https://github.com/SimplifyJobs/Summer2027-Internships) with configured employer boards through the public Greenhouse and Lever APIs. Matching posting IDs and normalized links are merged before pagination. Direct listings can cover other terms, so check the employer posting.
+The web finders combine the [Pitt CSC & Simplify Summer 2027 feed](https://github.com/SimplifyJobs/Summer2027-Internships) with configured Greenhouse and Lever boards, Lockheed Martin’s Eightfold portal, and Disney Careers. Matching posting IDs and normalized links are merged before pagination. Active curated software engineering internships with an unspecified term also appear. Listings without Summer 2027 metadata are marked “Check posting for term.”
 
 - `employer_boards.json` lists each employer, its provider, and its board identifier. A company-name search filters the combined sources.
 - Both web pages use `applications/job_sources.py` for fetching, normalization, caching, and filtering. Shared location rules live in `applications/finder_filters.py`.
 - Each card identifies its provider and retrieval time. The source coverage panel lists available, stale, and unavailable sources.
 - Search includes technology internship and co-op titles with recognized US locations. It does not guarantee Summer 2027 eligibility. Check the original posting for dates, requirements, and availability.
-- The broader title rules cover software, data, systems, security, and related technology terms. Classification can miss unconventional titles.
-- Degree filtering conservatively checks description text for explicit graduate requirements. Bachelor alternatives and unknown requirements remain visible. It is a heuristic, so confirm on the employer posting.
+- The software-only filter recognizes titles such as application developer, full-stack developer, backend engineer, and mobile engineer. Broader searches also include data, systems, and security roles. Title-based matching can miss unconventional listings.
+- Degree filtering uses curated degree tags and explicit graduate requirements in the descriptions available from direct feeds. Postings that list a bachelor’s alternative or omit degree requirements remain visible.
 - Source responses are cached for 15 minutes, with a last-success snapshot retained up to 24 hours for failures. Cached fallback cards are labeled. An employer that successfully returns no matching jobs replaces its previous snapshot.
 - Up to eight employer requests run concurrently, with connection and read timeouts. A cold search can take longer than a cached search. The cache is shared by local Gunicorn workers through a private filesystem directory and may be cleared by a deployment.
 - Greenhouse update times are stored separately from posting dates. Within each employer, dated postings sort newest first. Employers are interleaved before pagination.
-- Coverage depends on the employer directory and active postings. This release has not been shown to exceed SimplifyJobs coverage.
+- Coverage depends on configured sources and their search results. Lockheed Martin uses the first page of its software engineering intern search. Disney searches up to three pages for “Summer 2027.”
 - Email extraction still uses patterns and may require corrections. Live inbox monitoring is not connected.
 - Opening a posting does not submit an application.
 
@@ -171,17 +171,15 @@ Add an entry to `employer_boards.json` using an identifier from the employer's a
 {"provider": "greenhouse", "board": "example", "company": "Example"}
 ```
 
-Supported provider names are `greenhouse` and `lever`. The identifier is the board token/site name, not necessarily the company's domain. Verify each source with:
+For new employer boards, use `greenhouse` or `lever` with the employer’s board token or site name. The `eightfold` and `disney` entries use company-specific integrations. Run this command to verify the configured sources.
 
 ```powershell
 .\.venv\Scripts\python.exe manage.py check_job_sources
 ```
 
-Run that command before republishing to warm the shared cache and review source health. A source that fails retains its previous public snapshot when available. Network restrictions or company board migrations can cause failures.
+Run the command in the environment you want to check. It refreshes that environment’s cache as needed and reports source availability. A source that fails retains its previous public snapshot when available. Network restrictions or company board migrations can cause failures.
 
-Provider documentation:
-- https://docs.greenhouse.io/job-board
-- https://github.com/lever/postings-api
+See the [Greenhouse Job Board API](https://docs.greenhouse.io/job-board) and [Lever Postings API](https://github.com/lever/postings-api) documentation for board identifiers.
 
 The earlier `finder.py` CLI and `company_boards.json` remain legacy tools and are separate from the web source directory.
 
@@ -206,7 +204,6 @@ The earlier `finder.py` CLI and `company_boards.json` remain legacy tools and ar
 ## Future Improvements
 
 - Expand and regularly verify the employer directory and measure coverage against other sources.
-
 - Add a fictional email-import walkthrough to the demo.
 - Support additional listing sources and search options.
 - Improve email extraction and validation.
