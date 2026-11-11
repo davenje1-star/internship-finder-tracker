@@ -157,3 +157,13 @@ STORAGES = {
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Shared by Gunicorn workers. Cached public board data contains no account data.
+# Ephemeral hosts may clear this on deployment; a cold search then refreshes it.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": BASE_DIR / ".finder_cache",
+        "OPTIONS": {"MAX_ENTRIES": 1000},
+    }
+}

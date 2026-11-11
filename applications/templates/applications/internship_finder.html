@@ -29,9 +29,16 @@
         <a href="{% url 'admin:index' %}">Admin</a>
     </nav>
     <h1>Find software internships</h1>
-    <p>Search Summer 2027 software internships across companies. Listings provided by
-        <a href="https://github.com/SimplifyJobs/Summer2027-Internships" target="_blank" rel="noopener noreferrer">Pitt CSC &amp; Simplify</a>.
-    </p>
+    <p>Search Summer 2027 and term-unspecified software internships from <a href="https://github.com/SimplifyJobs/Summer2027-Internships">Pitt CSC &amp; Simplify</a> and internships from employer career sites, including Lockheed Martin and Disney. Confirm season and eligibility with the employer.</p>
+    {% if sources %}
+        <details>
+            <summary>Source coverage and last successful retrieval</summary>
+            <p>An unavailable source can reduce results. Stale snapshots may include closed postings.</p>
+            <ul>{% for source in sources %}
+                <li>{{ source.company }} · {{ source.provider }} · {{ source.state }}{% if source.checked %} · {{ source.checked }}{% endif %}</li>
+            {% endfor %}</ul>
+        </details>
+    {% endif %}
     {% for message in messages %}
         <p class="notice">{{ message }}</p>
     {% endfor %}
@@ -41,12 +48,12 @@
         <fieldset>
             <legend>Company</legend>
             <label for="company">Search by company name</label>
-            <p><input id="company" type="search" name="company" maxlength="200" value="{{ company_query }}" placeholder="For example: Google or RTX"></p>
+            <p><input id="company" type="search" name="company" maxlength="200" value="{{ company_query }}" placeholder="For example: Datadog or Stripe"></p>
             <p>Leave blank to search all companies. Company searches also show your tracked applications.</p>
         </fieldset>
         <fieldset>
             <legend>Locations</legend>
-            <p>Leave all unchecked to search all recognized US locations.</p>
+            <p>Each metro includes nearby cities and suburbs. Leave all unchecked to search all recognized US locations.</p>
             <p><button type="button" data-city-selection="all">Select all cities</button> <button type="button" data-city-selection="none">Deselect all cities</button></p>
             <div class="options">
                 {% for city in cities %}
@@ -61,11 +68,11 @@
                 Software engineering titles only
             </label>
         </p>
-        <p>Show titles containing Software Engineer, Software Engineering, Software Developer, or Software Development. Leave unchecked to include broader technology roles.</p>
+        <p>Includes software engineer, software developer, application development, frontend, backend, full-stack, mobile, and related software titles. Leave unchecked to include broader technology roles.</p>
         <p>
             <label><input type="checkbox" name="hide_graduate" {% if hide_graduate %}checked{% endif %}> Hide roles requiring a master's or PhD</label>
         </p>
-        <p>Roles accepting bachelor's students and listings without degree information stay visible. Check the posting for full requirements.</p>
+        <p>This filter uses degree tags and explicit graduate requirements in posting text. Bachelor alternatives and unclear requirements stay visible. Check the posting for full requirements.</p>
         <p><label><input type="checkbox" name="hide_applied" {% if hide_applied %}checked{% endif %}> Skip companies I have already applied to</label></p>
         <p>Uncheck this option to find additional roles at companies you have applied to.</p>
         <button type="submit">Search internships</button>
@@ -90,11 +97,12 @@
             </section>
         {% endif %}
         <h2>{{ total }} matching opportunities</h2>
-        <p>Showing up to 25 per page. {% if hide_graduate %}Graduate-only roles are hidden using the source’s degree information.{% else %}Results may include advanced-degree roles.{% endif %}</p>
+        <p>Showing up to 25 per page. {% if hide_graduate %}Listings with graduate-only degree tags or explicit graduate requirements are filtered.{% else %}Results may include advanced-degree roles.{% endif %}</p>
         {% for job in jobs %}
             <article>
                 <h2>{{ job.role }}</h2>
                 <p>{{ job.company }} · {{ job.location }}</p>
+                <p>Source: {{ job.source }} · {% if job.summer_2027 %}Summer 2027{% else %}Check posting for term{% endif %} · Retrieved {{ job.fetched_at }}{% if job.stale %} · Cached snapshot; refresh failed{% endif %}</p>
                 {% if job.tracked %}
                     <span class="badge">Already tracked</span>
                 {% elif job.company_applied %}

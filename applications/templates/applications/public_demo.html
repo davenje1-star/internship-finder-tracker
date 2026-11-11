@@ -44,8 +44,11 @@
         .table-wrap {
             overflow: auto;
         }
-        svg {
+        .chart svg {
             display: block;
+            max-width: 100%;
+            min-width: min(var(--chart-width), 780px);
+            height: auto;
         }
         svg text {
             font-size: 12px;
@@ -119,16 +122,18 @@
     </div>
     <section>
         <h2>Sample application paths</h2>
-        <p class="muted">Follow each branch from left to right. Wider lines represent more applications. “Current” marks the latest stage. Saved opportunities remain in the table and counts but are excluded from the chart.</p>
+        <p class="muted">Every path starts at Applied. Recorded stages progress to the right. Rejected branches down from the last recorded stage, with Ghosted below it. “Current” marks applications still at a stage. Wider bands represent more applications.</p>
         <div class="chart">
-            <svg width="{{ flow.width }}" height="{{ flow.height }}" role="img" aria-labelledby="flow-title flow-description">
+            <svg width="{{ flow.width }}"
+                    style="--chart-width: {{ flow.width }}px"
+                    viewBox="0 0 {{ flow.width }} {{ flow.height }}" height="{{ flow.height }}" role="img" aria-labelledby="flow-title flow-description">
                 <title id="flow-title">Fictional application progress</title>
                 <desc id="flow-description">Sample applications branch through recorded assessments and interviews to their current stages. Individual histories are available in the table below.</desc>
                 {% for link in flow.links %}
-                    <path d="{{ link.path }}" stroke="{{ link.color }}" stroke-width="{{ link.width }}" stroke-opacity="0.28" fill="none"><title>{{ link.label }}: {{ link.count }} applications</title></path>
+                    <path d="{{ link.path }}" stroke="{{ link.color }}" stroke-width="{{ link.width }}" stroke-opacity="0.34" fill="none"><title>{{ link.label }}: {{ link.count }} applications</title></path>
                 {% endfor %}
                 {% for node in flow.nodes %}
-                    <rect x="{{ node.x }}" y="{{ node.y }}" width="16" height="{{ node.height }}" fill="{{ node.color }}"><title>{{ node.label }}: {{ node.count }}</title></rect>
+                    <rect x="{{ node.x }}" y="{{ node.y }}" width="{{ node.width|default:16 }}" height="{{ node.height }}" fill="{{ node.color }}"><title>{{ node.label }}: {{ node.count }}</title></rect>
                     <text x="{{ node.label_x }}" y="{{ node.label_y }}">{{ node.label }} ({{ node.count }})</text>
                 {% endfor %}
             </svg>

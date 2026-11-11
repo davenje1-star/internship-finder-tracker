@@ -26,18 +26,27 @@
     </nav>
     <h1>Find software internships</h1>
     <p class="notice">Public search uses real listings. You can search, filter, and open employer postings. Saving opportunities and personal application history are available only in the private tracker.</p>
-    <p>Search Summer 2027 US software internships from <a href="https://github.com/SimplifyJobs/Summer2027-Internships" target="_blank" rel="noopener noreferrer">Pitt CSC &amp; Simplify</a>. Results may be incomplete or outdated; confirm availability and eligibility with the employer.</p>
+    <p>Search Summer 2027 and term-unspecified software internships from <a href="https://github.com/SimplifyJobs/Summer2027-Internships">Pitt CSC &amp; Simplify</a> and internships from employer career sites, including Lockheed Martin and Disney. Confirm season and eligibility with the employer.</p>
+    {% if sources %}
+        <details>
+            <summary>Source coverage and last successful retrieval</summary>
+            <p>An unavailable source can reduce results. Stale snapshots may include closed postings.</p>
+            <ul>{% for source in sources %}
+                <li>{{ source.company }} · {{ source.provider }} · {{ source.state }}{% if source.checked %} · {{ source.checked }}{% endif %}</li>
+            {% endfor %}</ul>
+        </details>
+    {% endif %}
     <form method="get">
         <input type="hidden" name="search" value="1">
         <fieldset>
             <legend>Company</legend>
             <label for="company">Search by company name</label>
-            <p><input id="company" name="company" type="search" maxlength="200" value="{{ company_query }}" placeholder="For example: Google or RTX"></p>
+            <p><input id="company" name="company" type="search" maxlength="200" value="{{ company_query }}" placeholder="For example: Datadog or Stripe"></p>
             <p>Leave blank to search all companies.</p>
         </fieldset>
         <fieldset>
             <legend>Locations</legend>
-            <p>Leave all unchecked to search all recognized US locations.</p>
+            <p>Each metro includes nearby cities and suburbs. Leave all unchecked to search all recognized US locations.</p>
             <div class="options">
                 {% for city in cities %}
                     <label><input type="checkbox" name="cities" value="{{ city }}" {% if city in selected_cities %}checked{% endif %}> {{ city }}</label>
@@ -46,9 +55,9 @@
             <p>Remote listings without a stated US location are excluded.</p>
         </fieldset>
         <p><label><input type="checkbox" name="software_only" {% if software_only %}checked{% endif %}> Software engineering titles only</label></p>
-        <p>Show titles containing Software Engineer, Software Engineering, Software Developer, or Software Development. Leave unchecked for broader technology roles.</p>
+        <p>Includes software engineer, software developer, application development, frontend, backend, full-stack, mobile, and related software titles. Leave unchecked to include broader technology roles.</p>
         <p><label><input type="checkbox" name="hide_graduate" {% if hide_graduate %}checked{% endif %}> Hide roles requiring a master's or PhD</label></p>
-        <p>Roles accepting bachelor's students and listings without degree information stay visible.</p>
+        <p>This filter uses degree tags and explicit graduate requirements in posting text. Bachelor alternatives and unclear requirements stay visible.</p>
         <button type="submit">Search internships</button>
         <a href="{% url 'public_finder' %}">Clear filters</a>
     </form>
@@ -61,6 +70,7 @@
             <article>
                 <h2>{{ job.role }}</h2>
                 <p>{{ job.company }} · {{ job.location }}</p>
+                <p>Source: {{ job.source }} · {% if job.summer_2027 %}Summer 2027{% else %}Check posting for term{% endif %} · Retrieved {{ job.fetched_at }}{% if job.stale %} · Cached snapshot; refresh failed{% endif %}</p>
                 <a href="{{ job.link }}" target="_blank" rel="noopener noreferrer">View employer posting</a>
             </article>
         {% empty %}

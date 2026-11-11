@@ -14,6 +14,7 @@ class Application(models.Model):
         ("Second Interview", "Second Interview"),
         ("Final Interview", "Final Interview"),
         ("Rejected", "Rejected"),
+        ("Ghosted", "Ghosted"),
         ("Offer", "Offer"),
     ]
 

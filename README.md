@@ -18,6 +18,8 @@ Hosted on Render with Neon PostgreSQL. The first visit may take about a minute t
 
 ### Internship Finder
 
+Searches Summer 2027 listings from Pitt CSC & Simplify and current employer postings from Greenhouse and Lever.
+
 - Search listings by company and filter recognized US locations.
 - Narrow results to software engineering and development titles.
 - Optionally hide roles whose stated requirements are exclusively master's or PhD.
@@ -127,7 +129,7 @@ Configure the Render service with:
 | Branch | `main` |
 | Root Directory | Leave blank |
 | Build Command | `pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate --noinput` |
-| Start Command | `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT` |
+| Start Command | `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --timeout 90` |
 
 Add these private environment variables in Render:
 
@@ -146,19 +148,48 @@ Provider documentation: [Render Django deployment](https://render.com/docs/deplo
 
 ## Data Source and Limitations
 
-Listings come from [Pitt CSC & Simplify's Summer 2027 internship repository](https://github.com/SimplifyJobs/Summer2027-Internships).
+The web finders combine the [Pitt CSC & Simplify Summer 2027 feed](https://github.com/SimplifyJobs/Summer2027-Internships) with configured employer boards through the public Greenhouse and Lever APIs. Matching posting IDs and normalized links are merged before pagination. Direct listings can cover other terms, so check the employer posting.
 
-- The finder uses the public source rather than searching every employer's careers website.
-- Listings and classifications may be incomplete or outdated. Confirm availability and eligibility on the employer's posting.
-- Remote listings without a recognized US location are excluded.
-- Title and degree filters depend on the information supplied by the source.
-- Email extraction uses patterns and may require corrections. Live inbox monitoring is not connected.
-- Opening an employer posting does not submit an application.
+- `employer_boards.json` lists each employer, its provider, and its board identifier. A company-name search filters the combined sources.
+- Both web pages use `applications/job_sources.py` for fetching, normalization, caching, and filtering. Shared location rules live in `applications/finder_filters.py`.
+- Each card identifies its provider and retrieval time. The source coverage panel lists available, stale, and unavailable sources.
+- Search includes technology internship and co-op titles with recognized US locations. It does not guarantee Summer 2027 eligibility. Check the original posting for dates, requirements, and availability.
+- The broader title rules cover software, data, systems, security, and related technology terms. Classification can miss unconventional titles.
+- Degree filtering conservatively checks description text for explicit graduate requirements. Bachelor alternatives and unknown requirements remain visible. It is a heuristic, so confirm on the employer posting.
+- Source responses are cached for 15 minutes, with a last-success snapshot retained up to 24 hours for failures. Cached fallback cards are labeled. An employer that successfully returns no matching jobs replaces its previous snapshot.
+- Up to eight employer requests run concurrently, with connection and read timeouts. A cold search can take longer than a cached search. The cache is shared by local Gunicorn workers through a private filesystem directory and may be cleared by a deployment.
+- Greenhouse update times are stored separately from posting dates. Within each employer, dated postings sort newest first. Employers are interleaved before pagination.
+- Coverage depends on the employer directory and active postings. This release has not been shown to exceed SimplifyJobs coverage.
+- Email extraction still uses patterns and may require corrections. Live inbox monitoring is not connected.
+- Opening a posting does not submit an application.
+
+### Add employer boards
+
+Add an entry to `employer_boards.json` using an identifier from the employer's actual hosted board:
+
+```json
+{"provider": "greenhouse", "board": "example", "company": "Example"}
+```
+
+Supported provider names are `greenhouse` and `lever`. The identifier is the board token/site name, not necessarily the company's domain. Verify each source with:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py check_job_sources
+```
+
+Run that command before republishing to warm the shared cache and review source health. A source that fails retains its previous public snapshot when available. Network restrictions or company board migrations can cause failures.
+
+Provider documentation:
+- https://docs.greenhouse.io/job-board
+- https://github.com/lever/postings-api
+
+The earlier `finder.py` CLI and `company_boards.json` remain legacy tools and are separate from the web source directory.
 
 ## Development Checks
 
 ```powershell
 .\.venv\Scripts\python.exe manage.py check
+.\.venv\Scripts\python.exe manage.py test applications
 .\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
 .\.venv\Scripts\python.exe manage.py collectstatic --noinput
 ```
@@ -173,6 +204,8 @@ Listings come from [Pitt CSC & Simplify's Summer 2027 internship repository](htt
 - Separate public views made it possible to demonstrate the project using fictional dashboard data and public listings.
 
 ## Future Improvements
+
+- Expand and regularly verify the employer directory and measure coverage against other sources.
 
 - Add a fictional email-import walkthrough to the demo.
 - Support additional listing sources and search options.

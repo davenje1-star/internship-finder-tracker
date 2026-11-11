@@ -44,8 +44,11 @@
         .table-wrap {
             overflow: auto;
         }
-        svg {
+        .chart svg {
             display: block;
+            max-width: 100%;
+            min-width: min(var(--chart-width), 780px);
+            height: auto;
         }
         svg text {
             font-size: 12px;
@@ -125,21 +128,20 @@
     <section>
         <h2>Your application paths</h2>
         <p class="muted">
-            Follow each branch from left to right. Wider lines represent more
-            applications. Stages stay aligned even when applications have
-            different histories.
+            Every path starts at Applied. Recorded stages progress to the right.
+            Rejected branches down from the last recorded stage, with Ghosted below it.
+            “Current” marks applications still at a stage. Wider bands represent more applications.
         </p>
         <p class="muted">
-            Saved opportunities stay in the table but are excluded from this chart.
-            Only recorded stages are shown; earlier stages are not assumed.
-            “Current” marks an application's latest status.
-            Full details, including corrections and repeated rounds,
-            remain in View history.
+            Saved opportunities appear in the table. Expand View history for dates,
+            corrections, and repeated rounds.
         </p>
         {% if flow.nodes %}
             <div class="chart">
                 <svg
                     width="{{ flow.width }}"
+                    style="--chart-width: {{ flow.width }}px"
+                    viewBox="0 0 {{ flow.width }} {{ flow.height }}"
                     height="{{ flow.height }}"
                     role="img"
                     aria-labelledby="flow-title flow-description"
@@ -157,7 +159,7 @@
                             d="{{ link.path }}"
                             stroke="{{ link.color }}"
                             stroke-width="{{ link.width }}"
-                            stroke-opacity="0.28"
+                            stroke-opacity="0.34"
                             fill="none"
                         >
                             <title>
@@ -170,7 +172,7 @@
                         <rect
                             x="{{ node.x }}"
                             y="{{ node.y }}"
-                            width="16"
+                            width="{{ node.width|default:16 }}"
                             height="{{ node.height }}"
                             fill="{{ node.color }}"
                         >

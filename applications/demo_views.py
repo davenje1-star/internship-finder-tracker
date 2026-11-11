@@ -54,6 +54,7 @@ def sample_applications():
         ('Indigo Apps', 'Mobile Software Intern', ('Applied',)),
         ('Juniper Studio', 'Software Engineering Intern', ('Applied', 'First Interview', 'Second Interview', 'Final Interview')),
         ('Kite Computing', 'Software Developer Intern', ('Applied', 'Rejected')),
+        ('Lantern Systems', 'Software Engineering Intern', ('Applied', 'Ghosted')),
         ('Lumen Tools', 'Developer Tools Intern', ('Saved',)),
         ('Meadow Tech', 'Software Engineering Intern', ('Applied', 'Assessment', 'First Interview', 'Second Interview', 'Rejected')),
         ('Northstar Code', 'Software Engineering Intern', ('Applied', 'Interview')),

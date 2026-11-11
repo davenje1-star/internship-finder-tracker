@@ -26,3 +26,4 @@ seen_opportunities.json
 *.zip
 staticfiles/
 private_backups/
+.finder_cache/

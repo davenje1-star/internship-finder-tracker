@@ -12,7 +12,6 @@ from email.utils import parsedate_to_datetime
 
 from uuid import uuid4
 
-import requests
 
 from bs4 import BeautifulSoup
 
@@ -137,215 +136,9 @@ def application_create(request):
 
     )
 
-METRO_AREAS = {
-
-    "Atlanta": ["Atlanta", "Alpharetta", "Marietta", "Duluth"],
-
-    "Austin": ["Austin", "Round Rock"],
-
-    "Boston": ["Boston", "Cambridge", "Somerville", "Waltham"],
-
-    "Charlotte": ["Charlotte"],
-
-    "Chicago": ["Chicago", "Evanston", "Schaumburg"],
-
-    "Columbus": ["Columbus"],
-
-    "Dallas–Fort Worth": [
-
-        "Dallas", "Fort Worth", "Plano", "Irving", "Richardson",
-
-    ],
-
-    "Denver–Boulder": ["Denver", "Boulder", "Broomfield", "Aurora"],
-
-    "Detroit–Ann Arbor": ["Detroit", "Ann Arbor", "Dearborn", "Troy"],
-
-    "Houston": ["Houston"],
-
-    "Indianapolis": ["Indianapolis", "Carmel", "Westfield"],
-
-    "Kansas City": ["Kansas City", "Overland Park"],
-
-    "Los Angeles": [
-
-        "Los Angeles", "Santa Monica", "Culver City", "Pasadena",
-
-    ],
-
-    "Miami–Fort Lauderdale": [
-
-        "Miami", "Fort Lauderdale", "Boca Raton",
-
-    ],
-
-    "Minneapolis–St. Paul": [
-
-        "Minneapolis", "St. Paul", "Saint Paul", "Bloomington",
-
-    ],
-
-    "Nashville": ["Nashville", "Franklin"],
-
-    "New York City": [
-
-        "New York", "NYC", "Brooklyn", "Jersey City", "Hoboken",
-
-    ],
-
-    "Philadelphia": ["Philadelphia", "King of Prussia"],
-
-    "Phoenix": ["Phoenix", "Tempe", "Scottsdale", "Chandler", "Mesa"],
-
-    "Pittsburgh": ["Pittsburgh"],
-
-    "Portland": ["Portland", "Hillsboro", "Beaverton"],
-
-    "Raleigh–Durham": [
-
-        "Raleigh", "Durham", "Cary", "Research Triangle Park",
-
-    ],
-
-    "Salt Lake City": ["Salt Lake City", "Lehi", "Draper", "Provo", "Sandy"],
-
-    "San Francisco Bay Area": [
-
-        "San Francisco", "San Jose", "Palo Alto", "Mountain View",
-
-        "Sunnyvale", "Santa Clara", "Menlo Park", "Redwood City",
-
-        "Foster City", "San Mateo", "Oakland", "Berkeley",
-
-    ],
-
-    "Seattle": ["Seattle", "Bellevue", "Redmond", "Kirkland"],
-
-}
-
-CITY_OPTIONS = list(METRO_AREAS)
-
-METRO_STATES = {
-
-    "Atlanta": {"GA"},
-
-    "Austin": {"TX"},
-
-    "Boston": {"MA"},
-
-    "Charlotte": {"NC"},
-
-    "Chicago": {"IL"},
-
-    "Columbus": {"OH"},
-
-    "Dallas–Fort Worth": {"TX"},
-
-    "Denver–Boulder": {"CO"},
-
-    "Detroit–Ann Arbor": {"MI"},
-
-    "Houston": {"TX"},
-
-    "Indianapolis": {"IN"},
-
-    "Kansas City": {"MO", "KS"},
-
-    "Los Angeles": {"CA"},
-
-    "Miami–Fort Lauderdale": {"FL"},
-
-    "Minneapolis–St. Paul": {"MN"},
-
-    "Nashville": {"TN"},
-
-    "New York City": {"NY", "NJ"},
-
-    "Philadelphia": {"PA"},
-
-    "Phoenix": {"AZ"},
-
-    "Pittsburgh": {"PA"},
-
-    "Portland": {"OR"},
-
-    "Raleigh–Durham": {"NC"},
-
-    "Salt Lake City": {"UT"},
-
-    "San Francisco Bay Area": {"CA"},
-
-    "Seattle": {"WA"},
-
-}
-
-US_STATES = {
-
-    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
-
-    "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
-
-    "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
-
-    "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
-
-    "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
-
-    "DC",
-
-}
-
-DATASET_URL = (
-
-    "https://raw.githubusercontent.com/SimplifyJobs/"
-
-    "Summer2027-Internships/dev/.github/scripts/listings.json"
-
+from .finder_filters import (
+    METRO_AREAS, CITY_OPTIONS, METRO_STATES, US_STATES, location_state, matches_metro, company_key, numeric_job_ids, is_us_location, software_title_matches, graduate_only_listing
 )
-
-def location_state(location):
-
-    match = re.search(
-
-        r",\s*([A-Z]{2})(?:\s*,\s*(?:USA|US|United States))?\s*$",
-
-        location,
-
-        flags=re.IGNORECASE,
-
-    )
-
-    return match.group(1).upper() if match else ""
-
-def matches_metro(location, metro):
-
-    if location_state(location) not in METRO_STATES[metro]:
-
-        return False
-
-    city_text = location.split(",")[0].strip().casefold()
-
-    return any(
-
-        city_text == alias.casefold()
-
-        for alias in METRO_AREAS[metro]
-
-    )
-
-def company_key(name):
-
-    return re.sub(r"[^a-z0-9]", "", name.casefold())
-
-def numeric_job_ids(role, link=""):
-
-    # Long numeric requisition IDs; four-digit years are excluded.
-
-    return set(re.findall(r"(?<![A-Za-z0-9])\d{6,}(?![A-Za-z0-9])", f"{role} {link}"))
-
-
-
-
 
 def listing_is_tracked(job, owner):
 
@@ -386,52 +179,6 @@ def listing_is_tracked(job, owner):
             return True
 
     return False
-
-
-
-
-
-def is_us_location(location):
-
-    if re.search(r"\b(?:USA|United States)\b", location, re.IGNORECASE):
-
-        return True
-
-    return location_state(location) in US_STATES
-
-def software_title_matches(title):
-    return bool(re.search(
-        r"\bsoftware[\s/-]+(?:engineer(?:ing)?|developer|development)\b",
-        title,
-        flags=re.IGNORECASE,
-    ))
-
-
-def graduate_only_listing(listing):
-
-    degrees = listing.get("degrees") or []
-
-    if not isinstance(degrees, list) or not degrees:
-
-        return False
-
-    # Hide only when every stated degree is a graduate degree.
-
-    return all(
-
-        isinstance(degree, str)
-
-        and re.fullmatch(
-
-            r"masters?(?:degree)?|ms|msc|phd|doctorate|doctoral(?:degree)?",
-
-            re.sub(r"[^a-z]", "", degree.casefold()),
-
-        ) is not None
-
-        for degree in degrees
-
-    )
 
 
 
@@ -545,140 +292,22 @@ def internship_finder(request):
 
             company_query = request.POST.get("company", "").strip()[:200]
 
+            from .job_sources import get_feed, filter_jobs
+
             try:
-
-                listings = cache.get("summer2027_source")
-
-                if listings is None:
-
-                    response = requests.get(DATASET_URL, timeout=20)
-
-                    response.raise_for_status()
-
-                    listings = response.json()
-
-                    if not isinstance(listings, list):
-
-                        raise ValueError("Unexpected dataset format.")
-
-                    cache.set("summer2027_source", listings, 900)
-
-            except (requests.RequestException, ValueError):
-
-                messages.error(
-
-                    request,
-
-                    "Could not fetch internships. Please try again later.",
-
-                )
-
+                feed = get_feed()
+            except (ValueError, OSError):
+                messages.error(request, "Could not load employer sources. Check the board configuration.")
                 return redirect("internship_finder")
-
+            failed = sum(source["state"] != "available" for source in feed["sources"])
+            if failed:
+                messages.warning(request, f"{failed} listing sources could not refresh. Cached results are labeled when available.")
             applied_companies = applied_company_keys(request.user)
-
-            jobs = []
-
-            seen_links = set()
-
-            for listing in listings:
-
-                if not isinstance(listing, dict):
-
-                    continue
-
-                title = listing.get("title") or ""
-
-                company = listing.get("company_name") or ""
-
-                link = listing.get("url") or ""
-
-                terms = listing.get("terms") or []
-
-                if (
-
-                    listing.get("active") is not True
-
-                    or listing.get("is_visible") is not True
-
-                    or "Summer 2027" not in terms
-
-                    or listing.get("category") != "Software"
-
-                    or not company
-
-                    or not title
-
-                    or not link.startswith("https://")
-
-                    or link in seen_links
-
-                ):
-
-                    continue
-
-                locations = [
-
-                    location
-
-                    for location in (listing.get("locations") or [])
-
-                    if isinstance(location, str)
-
-                    and is_us_location(location)
-
-                ]
-
-                if not locations:
-
-                    continue
-
-                if selected_cities and not any(
-
-                    matches_metro(location, metro)
-
-                    for metro in selected_cities
-
-                    for location in locations
-
-                ):
-
-                    continue
-
-                if software_only and not software_title_matches(title):
-                    continue
-
-                if hide_graduate and graduate_only_listing(listing):
-
-                    continue
-
-                if company_query and company_query.casefold() not in company.casefold():
-
-                    continue
-
-                if hide_applied and company_key(company) in applied_companies:
-
-                    continue
-
-                seen_links.add(link)
-
-                jobs.append({
-
-                    "id": str(listing.get("id") or link),
-
-                    "company": company,
-
-                    "role": title,
-
-                    "location": "; ".join(locations),
-
-                    "link": link,
-
-                    "date_posted": listing.get("date_posted") or 0,
-
-                })
-
-            jobs.sort(key=lambda job: job["date_posted"], reverse=True)
+            jobs = filter_jobs(
+                feed, selected_cities, company_query, software_only, hide_graduate,
+                applied_companies if hide_applied else (),
+            )
+            request.session["finder_sources"] = feed["sources"]
 
             result_key = f"internship_results_{uuid4().hex}"
 
@@ -749,6 +378,7 @@ def internship_finder(request):
             "total": len(jobs),
 
             "searched": bool(result_key),
+            "sources": request.session.get("finder_sources", []),
 
         },
 

@@ -17,6 +17,7 @@
         .status-applied { background: #dbeafe; color: #1d4ed8; }
         .status-interview, .status-first, .status-second, .status-final { background: #fef3c7; color: #92400e; }
         .status-rejected { background: #fee2e2; color: #991b1b; }
+        .status-ghosted { background: #e2e8f0; color: #334155; }
         .status-offer { background: #dcfce7; color: #166534; }
         form { max-width: 1200px; margin: 24px auto; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
         input, select, button { padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; }
@@ -143,7 +144,7 @@
                     Saved: 'saved', Applied: 'applied', Assessment: 'assessment',
                     Interview: 'interview', 'First Interview': 'interview',
                     'Second Interview': 'interview', 'Final Interview': 'interview',
-                    Rejected: 'rejected', Offer: 'offer'
+                    Rejected: 'rejected', Ghosted: 'ghosted', Offer: 'offer'
                 };
                 button.className = 'status status-toggle status-' + colors[savedValue];
                 form.closest('tr').querySelector('.application-date').textContent = result.date_applied;
