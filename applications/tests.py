@@ -193,6 +193,13 @@ class EmployerFinderTests(TestCase):
         hidden = self.client.post(url, {"action": "hide_company", "job_id": self.job["id"]}, follow=True)
         self.assertContains(hidden, "0 matching opportunities")
         self.assertContains(hidden, "Hidden companies (1)")
+        shown = self.client.post(
+            url, {"action": "toggle_excluded", "show_excluded": "on"}, follow=True,
+        )
+        self.assertContains(shown, "2 matching opportunities")
+        self.assertContains(shown, "Hidden company")
+        hidden_again = self.client.post(url, {"action": "toggle_excluded"}, follow=True)
+        self.assertContains(hidden_again, "0 matching opportunities")
         self.assertFalse(Application.objects.filter(owner=user).exists())
 
         self.client.force_login(other)

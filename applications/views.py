@@ -213,12 +213,19 @@ def internship_finder(request):
 
     tracked_companies = tracked_company_keys(request.user)
     hidden_companies = list(HiddenCompany.objects.filter(owner=request.user).order_by("company", "pk"))
-    excluded_companies = tracked_companies | {entry.company_key for entry in hidden_companies}
-    jobs = [job for job in jobs if company_key(job["company"]) not in excluded_companies]
+    hidden_keys = {entry.company_key for entry in hidden_companies}
+    excluded_companies = tracked_companies | hidden_keys
+    show_excluded = request.session.get("finder_show_excluded", False)
+    if not show_excluded:
+        jobs = [job for job in jobs if company_key(job["company"]) not in excluded_companies]
 
     if request.method == "POST":
 
         action = request.POST.get("action")
+
+        if action == "toggle_excluded":
+            request.session["finder_show_excluded"] = request.POST.get("show_excluded") == "on"
+            return redirect("internship_finder")
 
         if action == "hide_company":
             selected = next((job for job in jobs if job["id"] == request.POST.get("job_id")), None)
@@ -343,6 +350,12 @@ def internship_finder(request):
             return redirect("internship_finder")
 
     page = Paginator(jobs, 25).get_page(request.GET.get("page"))
+    for job in page.object_list:
+        key = company_key(job["company"])
+        job["company_hidden"] = key in hidden_keys
+        job["company_tracked"] = key in tracked_companies
+        job["tracked"] = job["company_tracked"] and listing_is_tracked(job, request.user)
+
 
     return render(
 
@@ -354,6 +367,7 @@ def internship_finder(request):
 
             "company_query": company_query,
             "hidden_companies": hidden_companies,
+            "show_excluded": show_excluded,
 
             "cities": CITY_OPTIONS,
 

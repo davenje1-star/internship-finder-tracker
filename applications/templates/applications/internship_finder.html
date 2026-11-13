@@ -39,9 +39,7 @@
             {% endfor %}</ul>
         </details>
     {% endif %}
-    {% for message in messages %}
-        <p class="notice">{{ message }}</p>
-    {% endfor %}
+
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="action" value="search">
@@ -49,7 +47,7 @@
             <legend>Company</legend>
             <label for="company">Search by company name</label>
             <p><input id="company" type="search" name="company" maxlength="200" value="{{ company_query }}" placeholder="For example: Datadog or Stripe"></p>
-            <p>Leave blank to search all companies. Companies in My Applications are automatically excluded.</p>
+            <p>Leave blank to search all companies. Companies in My Applications and companies you hide are excluded by default.</p>
         </fieldset>
         <fieldset>
             <legend>Locations</legend>
@@ -75,8 +73,19 @@
         <p>This filter uses degree tags and explicit graduate requirements in posting text. Bachelor alternatives and unclear requirements stay visible. Check the posting for full requirements.</p>
         <button type="submit">Search internships</button>
     </form>
+    <form method="post" id="finder-visibility">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="toggle_excluded">
+        <label><input type="checkbox" name="show_excluded" {% if show_excluded %}checked{% endif %}> Show hidden companies and companies in My Applications</label>
+        <button type="submit">Apply</button>
+    </form>
+    <p id="finder-request-status" role="status"></p>
+    <div id="finder-results">
+        <div role="status">
+            {% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}
+        </div>
     {% if hidden_companies %}
-        <details>
+        <details id="finder-hidden-companies">
             <summary>Hidden companies ({{ hidden_companies|length }})</summary>
             {% for entry in hidden_companies %}
                 <form method="post" class="actions">
@@ -97,20 +106,24 @@
                 <h2>{{ job.role }}</h2>
                 <p>{{ job.company }} · {{ job.location }}</p>
                 <p>Source: {% if job.source == "Pitt CSC & Simplify" %}Curated internship feed{% else %}{{ job.source }}{% endif %} · {% if job.summer_2027 %}Summer 2027{% else %}Check posting for term{% endif %} · Retrieved {{ job.fetched_at }}{% if job.stale %} · Cached snapshot; refresh failed{% endif %}</p>
+                {% if job.company_hidden %}<span class="badge">Hidden company</span>{% endif %}
+                {% if job.company_tracked %}<span class="badge">Company in My Applications</span>{% endif %}
                 <div class="actions">
                     <a href="{{ job.link }}" target="_blank" rel="noopener noreferrer">View application</a>
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="save">
                         <input type="hidden" name="job_id" value="{{ job.id }}">
-                        <button type="submit">Save</button>
+                        <button type="submit" {% if job.tracked %}disabled{% endif %}>{% if job.tracked %}Already tracked{% else %}Save{% endif %}</button>
                     </form>
+                    {% if not job.company_hidden %}
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="hide_company">
                         <input type="hidden" name="job_id" value="{{ job.id }}">
                         <button type="submit" aria-label="Hide company {{ job.company }}">Hide company</button>
                     </form>
+                    {% endif %}
                 </div>
             </article>
         {% empty %}
@@ -124,85 +137,62 @@
             </nav>
         {% endif %}
     {% endif %}
+    </div>
 <script>
 (() => {
-    let saving = false;
+    const actions = new Set(["hide_company", "unhide_company", "toggle_excluded", "save"]);
+    const visibility = document.querySelector("#finder-visibility");
+    const checkbox = visibility.elements.show_excluded;
+    const status = document.querySelector("#finder-request-status");
+    let updating = false;
+
+    visibility.querySelector("button").hidden = true;
+    checkbox.addEventListener("change", () => visibility.requestSubmit());
 
     document.addEventListener("submit", async (event) => {
         const form = event.target;
-        const action = form.querySelector('input[name="action"]');
-
-        if (!action || action.value !== "save") return;
+        const action = form.querySelector('input[name="action"]')?.value;
+        if (!actions.has(action)) return;
 
         event.preventDefault();
-        if (saving) return;
+        if (updating) return;
 
-        const button = form.querySelector('button[type="submit"]');
         const data = new FormData(form);
-        const jobId = data.get("job_id");
-        const originalText = button.textContent;
-
-        let notice = form.querySelector(".save-message");
-        if (!notice) {
-            notice = document.createElement("p");
-            notice.className = "save-message";
-            notice.setAttribute("role", "status");
-            form.appendChild(notice);
-        }
-
-        saving = true;
-        button.disabled = true;
-        button.textContent = "Saving…";
-        notice.textContent = "";
+        const button = event.submitter;
+        updating = true;
+        checkbox.disabled = true;
+        if (button) button.disabled = true;
+        status.textContent = "Updating results…";
 
         try {
-            const response = await fetch(window.location.href, {
+            const response = await fetch(form.getAttribute("action") || location.href, {
                 method: "POST",
                 body: data,
-                credentials: "same-origin"
-            });
-
-            if (new URL(response.url).pathname !== location.pathname) {
-                throw new Error("Please sign in again in another tab.");
-            }
-            if (!response.ok) {
-                throw new Error("The server returned an error.");
-            }
-
-            // Retrieve this result page to verify that the job is tracked.
-            const check = await fetch(window.location.href, {
                 credentials: "same-origin",
-                cache: "no-store"
+                cache: "no-store",
             });
-
-            if (!check.ok ||
-                new URL(check.url).pathname !== location.pathname) {
-                throw new Error("Could not verify the save.");
+            if (!response.ok || new URL(response.url).pathname !== location.pathname) {
+                throw new Error("Could not update the finder. Refresh and try again.");
             }
 
-            const html = await check.text();
-            const page = new DOMParser().parseFromString(html, "text/html");
+            const page = new DOMParser().parseFromString(await response.text(), "text/html");
+            const results = page.querySelector("#finder-results");
+            if (!results) throw new Error("Could not load the updated results.");
 
-            const savedForm = [...page.querySelectorAll("form")].find(
-                candidate =>
-                    candidate.querySelector('input[name="job_id"]')?.value
-                    === jobId
-            );
-
-            if (!savedForm?.querySelector("button")?.disabled) {
-                throw new Error("Save was not confirmed.");
-            }
-
-            button.textContent = "Saved ✓";
-            notice.textContent = "Opportunity is tracked.";
+            const hiddenList = document.querySelector("#finder-hidden-companies");
+            const nextHiddenList = results.querySelector("#finder-hidden-companies");
+            if (hiddenList?.open && nextHiddenList) nextHiddenList.open = true;
+            document.querySelector("#finder-results").replaceWith(results);
+            checkbox.checked = page.querySelector("#finder-visibility").elements.show_excluded.checked;
+            history.replaceState(null, "", response.url);
+            status.textContent = "";
         } catch (error) {
-            button.disabled = false;
-            button.textContent = originalText;
-            notice.textContent =
-                error.message +
-                " Check My applications before retrying.";
+            if (action === "toggle_excluded") checkbox.checked = !checkbox.checked;
+            status.textContent = error.message;
         } finally {
-            saving = false;
+            checkbox.disabled = false;
+            if (button) button.disabled = false;
+            updating = false;
         }
     });
 })();
