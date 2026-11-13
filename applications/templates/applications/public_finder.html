@@ -26,13 +26,13 @@
     </nav>
     <h1>Find software internships</h1>
     <p class="notice">Public search uses real listings. You can search, filter, and open employer postings. Saving opportunities and personal application history are available only in the private tracker.</p>
-    <p>Search Summer 2027 and term-unspecified software internships from <a href="https://github.com/SimplifyJobs/Summer2027-Internships">Pitt CSC &amp; Simplify</a> and internships from employer career sites, including Lockheed Martin and Disney. Confirm season and eligibility with the employer.</p>
+    <p>Search Summer 2027 and term-unspecified software internships from a curated internship feed and employer career sites, including Lockheed Martin and Disney. Confirm season and eligibility with the employer.</p>
     {% if sources %}
         <details>
             <summary>Source coverage and last successful retrieval</summary>
             <p>An unavailable source can reduce results. Stale snapshots may include closed postings.</p>
             <ul>{% for source in sources %}
-                <li>{{ source.company }} · {{ source.provider }} · {{ source.state }}{% if source.checked %} · {{ source.checked }}{% endif %}</li>
+                <li>{% if source.company == "Pitt CSC & Simplify" %}Curated internship feed{% else %}{{ source.company }}{% endif %} · {{ source.provider }} · {{ source.state }}{% if source.checked %} · {{ source.checked }}{% endif %}</li>
             {% endfor %}</ul>
         </details>
     {% endif %}
@@ -70,7 +70,7 @@
             <article>
                 <h2>{{ job.role }}</h2>
                 <p>{{ job.company }} · {{ job.location }}</p>
-                <p>Source: {{ job.source }} · {% if job.summer_2027 %}Summer 2027{% else %}Check posting for term{% endif %} · Retrieved {{ job.fetched_at }}{% if job.stale %} · Cached snapshot; refresh failed{% endif %}</p>
+                <p>Source: {% if job.source == "Pitt CSC & Simplify" %}Curated internship feed{% else %}{{ job.source }}{% endif %} · {% if job.summer_2027 %}Summer 2027{% else %}Check posting for term{% endif %} · Retrieved {{ job.fetched_at }}{% if job.stale %} · Cached snapshot; refresh failed{% endif %}</p>
                 <a href="{{ job.link }}" target="_blank" rel="noopener noreferrer">View employer posting</a>
             </article>
         {% empty %}
