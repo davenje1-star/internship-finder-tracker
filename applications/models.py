@@ -146,3 +146,13 @@ class IncomingEmail(models.Model):
 
     def __str__(self):
         return self.subject or f"Email from {self.sender}"
+
+class HiddenCompany(models.Model):
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    company_key = models.CharField(max_length=200)
+    company = models.CharField(max_length=200)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["owner", "company_key"], name="unique_hidden_company_per_owner"),
+        ]

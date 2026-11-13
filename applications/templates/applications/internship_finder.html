@@ -75,6 +75,20 @@
         <p>This filter uses degree tags and explicit graduate requirements in posting text. Bachelor alternatives and unclear requirements stay visible. Check the posting for full requirements.</p>
         <button type="submit">Search internships</button>
     </form>
+    {% if hidden_companies %}
+        <details>
+            <summary>Hidden companies ({{ hidden_companies|length }})</summary>
+            {% for entry in hidden_companies %}
+                <form method="post" class="actions">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="unhide_company">
+                    <input type="hidden" name="company_key" value="{{ entry.company_key }}">
+                    <span>{{ entry.company }}</span>
+                    <button type="submit" aria-label="Show {{ entry.company }} again">Show again</button>
+                </form>
+            {% endfor %}
+        </details>
+    {% endif %}
     {% if searched %}
         <h2>{{ total }} matching opportunities</h2>
         <p>Showing up to 25 per page. {% if hide_graduate %}Listings with graduate-only degree tags or explicit graduate requirements are filtered.{% else %}Results may include advanced-degree roles.{% endif %}</p>
@@ -90,6 +104,12 @@
                         <input type="hidden" name="action" value="save">
                         <input type="hidden" name="job_id" value="{{ job.id }}">
                         <button type="submit">Save</button>
+                    </form>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="hide_company">
+                        <input type="hidden" name="job_id" value="{{ job.id }}">
+                        <button type="submit" aria-label="Hide company {{ job.company }}">Hide company</button>
                     </form>
                 </div>
             </article>

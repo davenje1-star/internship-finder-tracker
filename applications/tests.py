@@ -179,6 +179,32 @@ class EmployerFinderTests(TestCase):
                 self.assertContains(response, "0 matching opportunities")
                 self.assertNotContains(response, application.role)
 
+    @patch("applications.job_sources.get_feed")
+    def test_private_finder_hides_whole_company_and_restores_it(self, get_feed):
+        get_feed.return_value = {
+            **self.feed,
+            "jobs": [self.job, {**self.job, "id": "second", "role": "Backend Intern"}],
+        }
+        user = get_user_model().objects.create_user(username="hide-owner", is_staff=True)
+        other = get_user_model().objects.create_user(username="hide-other", is_staff=True)
+        url = reverse("internship_finder")
+        self.client.force_login(user)
+        self.client.post(url, {"action": "search"})
+        hidden = self.client.post(url, {"action": "hide_company", "job_id": self.job["id"]}, follow=True)
+        self.assertContains(hidden, "0 matching opportunities")
+        self.assertContains(hidden, "Hidden companies (1)")
+        self.assertFalse(Application.objects.filter(owner=user).exists())
+
+        self.client.force_login(other)
+        visible = self.client.post(url, {"action": "search"}, follow=True)
+        self.assertContains(visible, "2 matching opportunities")
+        self.client.post(url, {"action": "unhide_company", "company_key": "example"})
+
+        self.client.force_login(user)
+        self.assertContains(self.client.post(url, {"action": "search"}, follow=True), "0 matching opportunities")
+        restored = self.client.post(url, {"action": "unhide_company", "company_key": "example"}, follow=True)
+        self.assertContains(restored, "2 matching opportunities")
+
     def test_expanded_metros_include_nearby_cities(self):
         for location, metro in (
             ("Lewisville, TX", "Dallas–Fort Worth"),

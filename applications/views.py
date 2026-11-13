@@ -55,7 +55,7 @@ from .email_helpers import (
 
 from .forms import ApplicationForm
 
-from .models import Application
+from .models import Application, HiddenCompany
 
 @staff_member_required
 
@@ -212,11 +212,32 @@ def internship_finder(request):
     company_query = request.session.get("broad_finder_company", "")
 
     tracked_companies = tracked_company_keys(request.user)
-    jobs = [job for job in jobs if company_key(job["company"]) not in tracked_companies]
+    hidden_companies = list(HiddenCompany.objects.filter(owner=request.user).order_by("company", "pk"))
+    excluded_companies = tracked_companies | {entry.company_key for entry in hidden_companies}
+    jobs = [job for job in jobs if company_key(job["company"]) not in excluded_companies]
 
     if request.method == "POST":
 
         action = request.POST.get("action")
+
+        if action == "hide_company":
+            selected = next((job for job in jobs if job["id"] == request.POST.get("job_id")), None)
+            if selected is None:
+                messages.error(request, "This result is no longer available. Please search again.")
+            else:
+                HiddenCompany.objects.get_or_create(
+                    owner=request.user,
+                    company_key=company_key(selected["company"]),
+                    defaults={"company": selected["company"]},
+                )
+                messages.success(request, f'{selected["company"]} hidden.')
+            return redirect("internship_finder")
+
+        if action == "unhide_company":
+            HiddenCompany.objects.filter(
+                owner=request.user, company_key=request.POST.get("company_key", ""),
+            ).delete()
+            return redirect("internship_finder")
 
         if action == "save":
 
@@ -332,6 +353,7 @@ def internship_finder(request):
         {
 
             "company_query": company_query,
+            "hidden_companies": hidden_companies,
 
             "cities": CITY_OPTIONS,
 
