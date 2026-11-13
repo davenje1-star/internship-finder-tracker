@@ -24,7 +24,7 @@ Searches Pitt CSC & Simplify listings and direct employer postings from Greenhou
 - Narrow results to software engineering and development titles.
 - Optionally hide roles whose stated requirements are exclusively master's or PhD.
 - Browse results in pages of 25 and open employer postings.
-- In the authenticated tracker, save opportunities, detect duplicates, and filter companies already applied to.
+- In the authenticated tracker, save opportunities, detect duplicates, and automatically exclude companies already in My Applications.
 
 ### Application Tracking
 

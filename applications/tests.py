@@ -159,24 +159,25 @@ class EmployerFinderTests(TestCase):
         self.assertEqual(self.client.get(reverse("internship_finder")).status_code, 302)
 
     @patch("applications.job_sources.get_feed")
-    def test_skip_applied_hides_lockheed_listings_and_history(self, get):
+    def test_private_search_hides_tracked_companies_regardless_of_status(self, get):
         get.return_value = {**self.feed, "jobs": [{**self.job, "company": "Lockheed Martin"}]}
         user = get_user_model().objects.create_user(username="owner", is_staff=True)
-        Application.objects.create(
+        application = Application.objects.create(
             owner=user, company="Lockheed Martin Corp. - Lockheed",
-            role="Software Engineer Full Stack Intern", status="Applied",
+            role="Software Engineer Full Stack Intern", status="Saved",
         )
         self.client.force_login(user)
         url = reverse("internship_finder")
-        search = {"action": "search", "company": "lockheed"}
 
-        response = self.client.post(url, {**search, "hide_applied": "on"}, follow=True)
-        self.assertContains(response, "0 matching opportunities")
-        self.assertNotContains(response, "Software Engineer Full Stack Intern")
-
-        response = self.client.post(url, search, follow=True)
-        self.assertContains(response, "1 matching opportunities")
-        self.assertContains(response, "Software Engineer Full Stack Intern")
+        for status in ("Saved", "Applied", "Rejected"):
+            with self.subTest(status=status):
+                application.status = status
+                application.save()
+                response = self.client.post(
+                    url, {"action": "search", "company": "lockheed"}, follow=True,
+                )
+                self.assertContains(response, "0 matching opportunities")
+                self.assertNotContains(response, application.role)
 
     def test_expanded_metros_include_nearby_cities(self):
         for location, metro in (

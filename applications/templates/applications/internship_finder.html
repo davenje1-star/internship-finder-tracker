@@ -49,7 +49,7 @@
             <legend>Company</legend>
             <label for="company">Search by company name</label>
             <p><input id="company" type="search" name="company" maxlength="200" value="{{ company_query }}" placeholder="For example: Datadog or Stripe"></p>
-            <p>Leave blank to search all companies. Company searches also show your tracked applications.</p>
+            <p>Leave blank to search all companies. Companies in My Applications are automatically excluded.</p>
         </fieldset>
         <fieldset>
             <legend>Locations</legend>
@@ -73,29 +73,9 @@
             <label><input type="checkbox" name="hide_graduate" {% if hide_graduate %}checked{% endif %}> Hide roles requiring a master's or PhD</label>
         </p>
         <p>This filter uses degree tags and explicit graduate requirements in posting text. Bachelor alternatives and unclear requirements stay visible. Check the posting for full requirements.</p>
-        <p><label><input type="checkbox" name="hide_applied" {% if hide_applied %}checked{% endif %}> Skip companies I have already applied to</label></p>
-        <p>Uncheck this option to find additional roles at companies you have applied to.</p>
         <button type="submit">Search internships</button>
     </form>
     {% if searched %}
-        {% if company_query %}
-            <section aria-labelledby="history-title">
-                <h2 id="history-title">Your tracked applications matching “{{ company_query }}”</h2>
-                <p>History includes all locations and can show postings that have closed. The skip filter also applies here.</p>
-                {% for application in tracked_applications %}
-                    <article>
-                        <h2>{{ application.role }}</h2>
-                        <p>{{ application.company }} · <span class="badge">{{ application.status }}</span></p>
-                        <p>Date applied: {{ application.date_applied|date:"Y-m-d"|default:"Not recorded" }}</p>
-                        {% if application.link %}
-                            <a href="{{ application.link }}" target="_blank" rel="noopener noreferrer">View posting</a>
-                        {% endif %}
-                    </article>
-                {% empty %}
-                    <p>No tracked applications match the current filters.</p>
-                {% endfor %}
-            </section>
-        {% endif %}
         <h2>{{ total }} matching opportunities</h2>
         <p>Showing up to 25 per page. {% if hide_graduate %}Listings with graduate-only degree tags or explicit graduate requirements are filtered.{% else %}Results may include advanced-degree roles.{% endif %}</p>
         {% for job in jobs %}
@@ -103,25 +83,18 @@
                 <h2>{{ job.role }}</h2>
                 <p>{{ job.company }} · {{ job.location }}</p>
                 <p>Source: {% if job.source == "Pitt CSC & Simplify" %}Curated internship feed{% else %}{{ job.source }}{% endif %} · {% if job.summer_2027 %}Summer 2027{% else %}Check posting for term{% endif %} · Retrieved {{ job.fetched_at }}{% if job.stale %} · Cached snapshot; refresh failed{% endif %}</p>
-                {% if job.tracked %}
-                    <span class="badge">Already tracked</span>
-                {% elif job.company_applied %}
-                    <span class="badge">Applied to another role at this company</span>
-                {% endif %}
                 <div class="actions">
                     <a href="{{ job.link }}" target="_blank" rel="noopener noreferrer">View application</a>
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="save">
                         <input type="hidden" name="job_id" value="{{ job.id }}">
-                        <button type="submit" {% if job.tracked %}disabled{% endif %}>
-                            {% if job.tracked %}Already tracked{% else %}Save{% endif %}
-                        </button>
+                        <button type="submit">Save</button>
                     </form>
                 </div>
             </article>
         {% empty %}
-            <p>No source listings match these filters. Try another company name, leave cities unchecked, uncheck the title filter, or turn off “Skip companies I have already applied to.”</p>
+            <p>No source listings match these filters. Try another company name, leave cities unchecked, or uncheck the title filter.</p>
         {% endfor %}
         {% if page_obj.has_other_pages %}
             <nav aria-label="Search result pages">

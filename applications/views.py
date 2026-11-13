@@ -184,13 +184,13 @@ def listing_is_tracked(job, owner):
 
 
 
-def applied_company_keys(owner):
+def tracked_company_keys(owner):
 
     return {
 
         company_key(name)
 
-        for name in Application.objects.filter(owner=owner).exclude(status="Saved")
+        for name in Application.objects.filter(owner=owner)
 
         .values_list("company", flat=True)
 
@@ -206,12 +206,13 @@ def internship_finder(request):
 
     selected_cities = request.session.get("broad_finder_cities", [])
 
-    hide_applied = request.session.get("broad_finder_hide_applied", False)
-
     software_only = request.session.get("broad_finder_software_only", False)
     hide_graduate = request.session.get("broad_finder_hide_graduate", False)
 
     company_query = request.session.get("broad_finder_company", "")
+
+    tracked_companies = tracked_company_keys(request.user)
+    jobs = [job for job in jobs if company_key(job["company"]) not in tracked_companies]
 
     if request.method == "POST":
 
@@ -285,8 +286,6 @@ def internship_finder(request):
 
             ]
 
-            hide_applied = request.POST.get("hide_applied") == "on"
-
             software_only = request.POST.get("software_only") == "on"
             hide_graduate = request.POST.get("hide_graduate") == "on"
 
@@ -302,10 +301,8 @@ def internship_finder(request):
             failed = sum(source["state"] != "available" for source in feed["sources"])
             if failed:
                 messages.warning(request, f"{failed} listing sources could not refresh. Cached results are labeled when available.")
-            applied_companies = applied_company_keys(request.user)
             jobs = filter_jobs(
                 feed, selected_cities, company_query, software_only, hide_graduate,
-                applied_companies if hide_applied else (),
             )
             request.session["finder_sources"] = feed["sources"]
 
@@ -317,8 +314,6 @@ def internship_finder(request):
 
             request.session["broad_finder_cities"] = selected_cities
 
-            request.session["broad_finder_hide_applied"] = hide_applied
-
             request.session["broad_finder_software_only"] = software_only
             request.session["broad_finder_hide_graduate"] = hide_graduate
 
@@ -326,38 +321,7 @@ def internship_finder(request):
 
             return redirect("internship_finder")
 
-    applied_companies = applied_company_keys(request.user)
-
-    if hide_applied:
-        jobs = [job for job in jobs if company_key(job["company"]) not in applied_companies]
-
     page = Paginator(jobs, 25).get_page(request.GET.get("page"))
-
-    for job in page.object_list:
-
-        job["tracked"] = listing_is_tracked(job, request.user)
-
-        job["company_applied"] = company_key(job["company"]) in applied_companies
-
-    tracked_applications = Application.objects.none()
-
-    if company_query:
-
-        tracked_applications = Application.objects.filter(
-
-            owner=request.user,
-
-            company__icontains=company_query,
-
-        ).order_by("company", "role", "-id")
-
-        if hide_applied:
-            tracked_applications = [
-                application for application in tracked_applications
-                if company_key(application.company) not in applied_companies
-            ]
-
-
 
     return render(
 
@@ -369,13 +333,9 @@ def internship_finder(request):
 
             "company_query": company_query,
 
-            "tracked_applications": tracked_applications,
-
             "cities": CITY_OPTIONS,
 
             "selected_cities": selected_cities,
-
-            "hide_applied": hide_applied,
 
             "hide_graduate": hide_graduate,
             "software_only": software_only,
