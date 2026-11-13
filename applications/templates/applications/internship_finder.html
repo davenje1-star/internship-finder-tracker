@@ -40,7 +40,7 @@
         </details>
     {% endif %}
 
-    <form method="post">
+    <form method="post" id="finder-search">
         {% csrf_token %}
         <input type="hidden" name="action" value="search">
         <fieldset>
@@ -71,7 +71,6 @@
             <label><input type="checkbox" name="hide_graduate" {% if hide_graduate %}checked{% endif %}> Hide roles requiring a master's or PhD</label>
         </p>
         <p>This filter uses degree tags and explicit graduate requirements in posting text. Bachelor alternatives and unclear requirements stay visible. Check the posting for full requirements.</p>
-        <button type="submit">Search internships</button>
     </form>
     <form method="post" id="finder-visibility">
         {% csrf_token %}
@@ -79,11 +78,7 @@
         <label><input type="checkbox" name="show_excluded" {% if show_excluded %}checked{% endif %}> Show hidden companies and companies in My Applications</label>
         <button type="submit">Apply</button>
     </form>
-    <p id="finder-request-status" role="status"></p>
-    <div id="finder-results">
-        <div role="status">
-            {% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}
-        </div>
+    <div id="finder-hidden-controls">
     {% if hidden_companies %}
         <details id="finder-hidden-companies">
             <summary>Hidden companies ({{ hidden_companies|length }})</summary>
@@ -98,6 +93,13 @@
             {% endfor %}
         </details>
     {% endif %}
+    </div>
+    <button type="submit" form="finder-search">Search internships</button>
+    <p id="finder-request-status" role="status"></p>
+    <div id="finder-results" data-page="{{ page_obj.number }}">
+        <div role="status">
+            {% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}
+        </div>
     {% if searched %}
         <h2>{{ total }} matching opportunities</h2>
         <p>Showing up to 25 per page. {% if hide_graduate %}Listings with graduate-only degree tags or explicit graduate requirements are filtered.{% else %}Results may include advanced-degree roles.{% endif %}</p>
@@ -180,11 +182,15 @@
             if (!results) throw new Error("Could not load the updated results.");
 
             const hiddenList = document.querySelector("#finder-hidden-companies");
-            const nextHiddenList = results.querySelector("#finder-hidden-companies");
+            const nextHiddenControls = page.querySelector("#finder-hidden-controls");
+            const nextHiddenList = nextHiddenControls.querySelector("#finder-hidden-companies");
             if (hiddenList?.open && nextHiddenList) nextHiddenList.open = true;
+            document.querySelector("#finder-hidden-controls").replaceWith(nextHiddenControls);
             document.querySelector("#finder-results").replaceWith(results);
             checkbox.checked = page.querySelector("#finder-visibility").elements.show_excluded.checked;
-            history.replaceState(null, "", response.url);
+            const url = new URL(response.url);
+            if (url.searchParams.has("page")) url.searchParams.set("page", results.dataset.page);
+            history.replaceState(null, "", url);
             status.textContent = "";
         } catch (error) {
             if (action === "toggle_excluded") checkbox.checked = !checkbox.checked;

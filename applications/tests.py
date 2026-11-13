@@ -212,6 +212,28 @@ class EmployerFinderTests(TestCase):
         restored = self.client.post(url, {"action": "unhide_company", "company_key": "example"}, follow=True)
         self.assertContains(restored, "2 matching opportunities")
 
+    @patch("applications.job_sources.get_feed")
+    def test_hiding_company_from_page_two_preserves_pagination(self, get_feed):
+        get_feed.return_value = {
+            **self.feed,
+            "jobs": [
+                {**self.job, "company": f"Employer {index:02d}", "id": str(index)}
+                for index in range(27)
+            ],
+        }
+        user = get_user_model().objects.create_user(username="page-owner", is_staff=True)
+        self.client.force_login(user)
+        url = reverse("internship_finder")
+        self.client.post(url, {"action": "search"})
+        page_two = f"{url}?page=2"
+
+        for job_id, expected_page in (("25", 2), ("26", 1)):
+            response = self.client.post(
+                page_two, {"action": "hide_company", "job_id": job_id}, follow=True,
+            )
+            self.assertEqual(response.redirect_chain, [(page_two, 302)])
+            self.assertEqual(response.context["page_obj"].number, expected_page)
+
     def test_expanded_metros_include_nearby_cities(self):
         for location, metro in (
             ("Lewisville, TX", "Dallas–Fort Worth"),

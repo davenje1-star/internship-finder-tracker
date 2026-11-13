@@ -10,6 +10,7 @@ from email.parser import BytesParser
 
 from email.utils import parsedate_to_datetime
 
+from urllib.parse import urlencode
 from uuid import uuid4
 
 
@@ -29,6 +30,7 @@ from django.db.models import Q
 
 from django.shortcuts import redirect, render
 
+from django.urls import reverse
 from django.utils import timezone
 
 from .email_forms import (
@@ -223,9 +225,13 @@ def internship_finder(request):
 
         action = request.POST.get("action")
 
+        results_url = reverse("internship_finder")
+        if request.GET.get("page"):
+            results_url += "?" + urlencode({"page": request.GET["page"]})
+
         if action == "toggle_excluded":
             request.session["finder_show_excluded"] = request.POST.get("show_excluded") == "on"
-            return redirect("internship_finder")
+            return redirect(results_url)
 
         if action == "hide_company":
             selected = next((job for job in jobs if job["id"] == request.POST.get("job_id")), None)
@@ -238,13 +244,13 @@ def internship_finder(request):
                     defaults={"company": selected["company"]},
                 )
                 messages.success(request, f'{selected["company"]} hidden.')
-            return redirect("internship_finder")
+            return redirect(results_url)
 
         if action == "unhide_company":
             HiddenCompany.objects.filter(
                 owner=request.user, company_key=request.POST.get("company_key", ""),
             ).delete()
-            return redirect("internship_finder")
+            return redirect(results_url)
 
         if action == "save":
 
@@ -302,7 +308,7 @@ def internship_finder(request):
 
                     messages.success(request, "Opportunity saved.")
 
-            return redirect("internship_finder")
+            return redirect(results_url)
 
         if action == "search":
 
