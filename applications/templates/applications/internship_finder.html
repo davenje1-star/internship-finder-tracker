@@ -30,7 +30,7 @@
         <a href="{% url 'import_email' %}">Import email</a>
         <a href="{% url 'admin:index' %}">Admin</a>
     </nav>
-    <h1>Find software internships</h1>
+    <h1>Find Software Internships</h1>
     <p>Search Summer 2027 and term-unspecified software internships from a curated internship feed and employer career sites, including Lockheed Martin and Disney. Confirm season and eligibility with the employer.</p>
     {% if sources %}
         <details>
@@ -78,7 +78,8 @@
         <form method="post" id="finder-visibility">
             {% csrf_token %}
             <input type="hidden" name="action" value="toggle_excluded">
-            <label><input type="checkbox" name="show_excluded" {% if show_excluded %}checked{% endif %}> Show hidden companies and companies in My Applications</label>
+            <label><input type="checkbox" name="show_excluded" aria-describedby="finder-visibility-help" {% if show_excluded %}checked{% endif %}> Show hidden companies and companies in My Applications</label>
+            <p id="finder-visibility-help">Check this to include companies you’ve hidden or already track. Turn it off to focus on companies you haven’t tracked or hidden yet.</p>
             <button type="submit">Apply</button>
         </form>
         <div id="finder-hidden-controls">{% if hidden_companies %}

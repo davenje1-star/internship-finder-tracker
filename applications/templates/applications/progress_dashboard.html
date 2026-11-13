@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Application progress</title>
+    <title>Application Progress</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -112,7 +112,7 @@
         <a href="{% url 'import_email' %}">Import email</a>
         <a href="{% url 'admin:index' %}">Admin</a>
     </nav>
-    <h1>Application progress</h1>
+    <h1>Application Progress</h1>
     <p>{{ total }} tracked applications</p>
     {% for message in messages %}
         <p class="notice">{{ message }}</p>
