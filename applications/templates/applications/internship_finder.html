@@ -81,7 +81,7 @@
         {% if company_query %}
             <section aria-labelledby="history-title">
                 <h2 id="history-title">Your tracked applications matching “{{ company_query }}”</h2>
-                <p>This history includes every status and location, even when a posting is no longer in the source.</p>
+                <p>History includes all locations and can show postings that have closed. The skip filter also applies here.</p>
                 {% for application in tracked_applications %}
                     <article>
                         <h2>{{ application.role }}</h2>
@@ -92,7 +92,7 @@
                         {% endif %}
                     </article>
                 {% empty %}
-                    <p>No tracked applications match this company name.</p>
+                    <p>No tracked applications match the current filters.</p>
                 {% endfor %}
             </section>
         {% endif %}

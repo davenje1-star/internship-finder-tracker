@@ -158,6 +158,26 @@ class EmployerFinderTests(TestCase):
         self.client.logout()
         self.assertEqual(self.client.get(reverse("internship_finder")).status_code, 302)
 
+    @patch("applications.job_sources.get_feed")
+    def test_skip_applied_hides_lockheed_listings_and_history(self, get):
+        get.return_value = {**self.feed, "jobs": [{**self.job, "company": "Lockheed Martin"}]}
+        user = get_user_model().objects.create_user(username="owner", is_staff=True)
+        Application.objects.create(
+            owner=user, company="Lockheed Martin Corp. - Lockheed",
+            role="Software Engineer Full Stack Intern", status="Applied",
+        )
+        self.client.force_login(user)
+        url = reverse("internship_finder")
+        search = {"action": "search", "company": "lockheed"}
+
+        response = self.client.post(url, {**search, "hide_applied": "on"}, follow=True)
+        self.assertContains(response, "0 matching opportunities")
+        self.assertNotContains(response, "Software Engineer Full Stack Intern")
+
+        response = self.client.post(url, search, follow=True)
+        self.assertContains(response, "1 matching opportunities")
+        self.assertContains(response, "Software Engineer Full Stack Intern")
+
     def test_expanded_metros_include_nearby_cities(self):
         for location, metro in (
             ("Lewisville, TX", "Dallas–Fort Worth"),

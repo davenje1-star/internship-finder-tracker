@@ -328,6 +328,9 @@ def internship_finder(request):
 
     applied_companies = applied_company_keys(request.user)
 
+    if hide_applied:
+        jobs = [job for job in jobs if company_key(job["company"]) not in applied_companies]
+
     page = Paginator(jobs, 25).get_page(request.GET.get("page"))
 
     for job in page.object_list:
@@ -347,6 +350,12 @@ def internship_finder(request):
             company__icontains=company_query,
 
         ).order_by("company", "role", "-id")
+
+        if hide_applied:
+            tracked_applications = [
+                application for application in tracked_applications
+                if company_key(application.company) not in applied_companies
+            ]
 
 
 

@@ -221,8 +221,10 @@ def matches_metro(location, metro):
 
 
 def company_key(name):
-
-    return re.sub(r"[^a-z0-9]", "", name.casefold())
+    key = re.sub(r"[^a-z0-9]", "", name.casefold())
+    if key in {"lockheedmartincorp", "lockheedmartincorporation", "lockheedmartincorplockheed"}:
+        return "lockheedmartin"
+    return key
 
 def numeric_job_ids(role, link=""):
 
