@@ -16,6 +16,8 @@
         .notice { background: #e8eefc; padding: 12px; border-radius: 6px; }
         .badge { display: inline-block; background: #e9edf4; padding: 5px 9px; border-radius: 5px; }
         h2 { font-size: 20px; }
+        .finder-controls { display: grid; justify-items: start; gap: 16px; margin-top: 20px; }
+        #finder-hidden-controls:empty { display: none; }
         .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; margin-top: 15px; }
     </style>
 </head>
@@ -72,29 +74,29 @@
         </p>
         <p>This filter uses degree tags and explicit graduate requirements in posting text. Bachelor alternatives and unclear requirements stay visible. Check the posting for full requirements.</p>
     </form>
-    <form method="post" id="finder-visibility">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="toggle_excluded">
-        <label><input type="checkbox" name="show_excluded" {% if show_excluded %}checked{% endif %}> Show hidden companies and companies in My Applications</label>
-        <button type="submit">Apply</button>
-    </form>
-    <div id="finder-hidden-controls">
-    {% if hidden_companies %}
-        <details id="finder-hidden-companies">
-            <summary>Hidden companies ({{ hidden_companies|length }})</summary>
-            {% for entry in hidden_companies %}
-                <form method="post" class="actions">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="unhide_company">
-                    <input type="hidden" name="company_key" value="{{ entry.company_key }}">
-                    <span>{{ entry.company }}</span>
-                    <button type="submit" aria-label="Show {{ entry.company }} again">Show again</button>
-                </form>
-            {% endfor %}
-        </details>
-    {% endif %}
+    <div class="finder-controls">
+        <form method="post" id="finder-visibility">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="toggle_excluded">
+            <label><input type="checkbox" name="show_excluded" {% if show_excluded %}checked{% endif %}> Show hidden companies and companies in My Applications</label>
+            <button type="submit">Apply</button>
+        </form>
+        <div id="finder-hidden-controls">{% if hidden_companies %}
+            <details id="finder-hidden-companies">
+                <summary>Hidden companies ({{ hidden_companies|length }})</summary>
+                {% for entry in hidden_companies %}
+                    <form method="post" class="actions">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="unhide_company">
+                        <input type="hidden" name="company_key" value="{{ entry.company_key }}">
+                        <span>{{ entry.company }}</span>
+                        <button type="submit" aria-label="Show {{ entry.company }} again">Show again</button>
+                    </form>
+                {% endfor %}
+            </details>
+        {% endif %}</div>
+        <button type="submit" form="finder-search">Search internships</button>
     </div>
-    <button type="submit" form="finder-search">Search internships</button>
     <p id="finder-request-status" role="status"></p>
     <div id="finder-results" data-page="{{ page_obj.number }}">
         <div role="status">
